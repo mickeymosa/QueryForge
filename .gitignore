@@ -1,0 +1,34 @@
+# .NET
+**/bin/
+**/obj/
+*.user
+.vs/
+TestResults/
+# Python
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.venv/
+*.py[cod]
+# Node
+node_modules/
+dist/
+coverage/
+# IDE / system
+.vscode/*.log
+.idea/
+.DS_Store
+Thumbs.db
+# Credentials and local data
+.env
+.env.*
+!.env.example
+*.pem
+*.pfx
+*.key
+local-data/
+private-data/
+*.db
+# Build/temporary
+.tmp/
+*.log
