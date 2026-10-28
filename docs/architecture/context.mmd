@@ -1,0 +1,8 @@
+flowchart TB
+  Analyst[Analyst or small team] --> UI[QueryForge Web UI]
+  UI --> API[ASP.NET Core API]
+  API --> DB[(PostgreSQL: dataset/workspace data)]
+  API -. optional .-> AI[LLM provider / local model]
+  API -. later phase .-> ETL[Python ingestion worker]
+  classDef primary fill:#e2f2fa,stroke:#286d98,color:#172e3e;
+  class API,UI primary;
