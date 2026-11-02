@@ -10,14 +10,15 @@ namespace QueryForge.Api;
 
 public sealed class CsvImportService(IQualityProfiler profiler, IDatasetRepository repository)
 {
-    public const long MaxUploadBytes = 1_048_576;
-    public const int MaxRows = 3_000;
-    public const int MaxColumns = 40;
+    // A bounded stepping stone, not streaming/enterprise-scale ingestion.
+    public const long MaxUploadBytes = 25L * 1024 * 1024;
+    public const int MaxRows = 30_000;
+    public const int MaxColumns = 80;
 
     public async Task<DatasetEntity> ImportAsync(IFormFile file, CancellationToken token)
     {
         if (file.Length is <= 0 or > MaxUploadBytes)
-            throw new InvalidDataException("CSV must be between 1 byte and 1 MiB.");
+            throw new InvalidDataException("CSV must be between 1 byte and 25 MiB.");
         if (!Path.GetExtension(file.FileName).Equals(".csv", StringComparison.OrdinalIgnoreCase))
             throw new InvalidDataException("Only .csv files are supported.");
 
@@ -46,14 +47,14 @@ public sealed class CsvImportService(IQualityProfiler profiler, IDatasetReposito
             headers.Any(string.IsNullOrWhiteSpace) ||
             headers.Distinct(StringComparer.OrdinalIgnoreCase).Count() != headers.Length)
             throw new InvalidDataException(
-                "CSV must have 1–40 non-empty, unique column headers.");
+                "CSV must have 1–80 non-empty, unique column headers.");
 
         var rows = new List<Dictionary<string, string>>();
         while (await csv.ReadAsync())
         {
             token.ThrowIfCancellationRequested();
             if (rows.Count >= MaxRows)
-                throw new InvalidDataException("CSV exceeds the 3,000 row limit.");
+                throw new InvalidDataException("CSV exceeds the 30,000 row limit.");
 
             var row = new Dictionary<string, string>(StringComparer.Ordinal);
             for (int c = 0; c < headers.Length; c++)

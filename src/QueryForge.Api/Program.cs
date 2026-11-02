@@ -1,10 +1,14 @@
 using CsvHelper;
 using Microsoft.EntityFrameworkCore;
 using QueryForge.Api;
+using Microsoft.AspNetCore.Http.Features;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddProblemDetails();
+// Form body is slightly larger than the file itself because multipart adds headers.
+builder.Services.Configure<FormOptions>(options =>
+    options.MultipartBodyLengthLimit = CsvImportService.MaxUploadBytes);
 builder.Services.AddSingleton<IQualityProfiler, DeterministicQualityProfiler>();
 builder.Services.AddSingleton<EtlPipeline>();
 builder.Services.AddScoped<IDatasetRepository, EfDatasetRepository>();
@@ -16,7 +20,7 @@ builder.Services.AddDbContext<QueryForgeDb>(options =>
 
 // Reject large requests at the web-server boundary, before model binding.
 builder.WebHost.ConfigureKestrel(options =>
-    options.Limits.MaxRequestBodySize = 2 * 1_048_576);
+    options.Limits.MaxRequestBodySize = CsvImportService.MaxUploadBytes + 2 * 1024 * 1024);
 
 var app = builder.Build();
 app.UseExceptionHandler();

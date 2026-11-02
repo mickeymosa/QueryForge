@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -16,7 +17,14 @@ public enum TransformOperation
     FillMissing,
     DropMissing,
     DropDuplicates,
-    RenameColumn
+    RenameColumn,
+    FilterEquals,
+    FilterContains,
+    FilterAmountAbove,
+    AddColumn,
+    CopyColumn,
+    SortAscending,
+    ReplaceText
 }
 
 public sealed record TransformStep(
@@ -99,17 +107,18 @@ public sealed class EtlPipeline
 
             string? col = step.Column;
             bool columnRequired = step.Operation is not TransformOperation.Trim || !string.IsNullOrWhiteSpace(col);
-            if (columnRequired)
+            if (columnRequired && step.Operation != TransformOperation.AddColumn)
             {
                 if (string.IsNullOrWhiteSpace(col) || !headers.Contains(col, StringComparer.Ordinal))
                     throw new EtlValidationException($"Step {index + 1}: select an existing, exact column name.");
             }
-            if (step.Operation is TransformOperation.FillMissing or TransformOperation.Replace or TransformOperation.RenameColumn)
+            if (step.Operation is TransformOperation.FillMissing or TransformOperation.Replace or TransformOperation.RenameColumn or TransformOperation.AddColumn or TransformOperation.CopyColumn or TransformOperation.ReplaceText)
             {
-                if (step.To is null || step.To.Length > 200 || step.To.Length == 0)
+                if (step.To is null || step.To.Length > 200 ||
+                    (step.To.Length == 0 && step.Operation != TransformOperation.ReplaceText))
                     throw new EtlValidationException($"Step {index + 1}: a non-empty replacement or target is required (max 200 chars).");
             }
-            if (step.Operation == TransformOperation.Replace &&
+            if ((step.Operation is TransformOperation.Replace or TransformOperation.ReplaceText or TransformOperation.FilterEquals or TransformOperation.FilterContains or TransformOperation.FilterAmountAbove) &&
                 (string.IsNullOrEmpty(step.From) || step.From.Length > 200))
                 throw new EtlValidationException($"Step {index + 1}: provide an original value (max 200 chars).");
 
@@ -189,6 +198,57 @@ public sealed class EtlPipeline
                             row.Values[target] = value;
                         }
                         affected = rows.Count;
+                    }
+                    break;
+                case TransformOperation.FilterEquals:
+                    affected = rows.RemoveAll(r => !string.Equals(
+                        r.Values[col!].Trim(), step.From!.Trim(), StringComparison.OrdinalIgnoreCase));
+                    break;
+                case TransformOperation.FilterContains:
+                    affected = rows.RemoveAll(r => !r.Values[col!].Contains(
+                        step.From!, StringComparison.OrdinalIgnoreCase));
+                    break;
+                case TransformOperation.FilterAmountAbove:
+                    if (!decimal.TryParse(step.From, NumberStyles.AllowLeadingSign |
+                            NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out decimal threshold))
+                        throw new EtlValidationException($"Step {index + 1}: threshold must be a decimal number using a dot.");
+                    affected = rows.RemoveAll(r =>
+                        !decimal.TryParse(r.Values[col!], NumberStyles.AllowLeadingSign |
+                            NumberStyles.AllowDecimalPoint | NumberStyles.AllowLeadingWhite |
+                            NumberStyles.AllowTrailingWhite, CultureInfo.InvariantCulture, out decimal val)
+                        || val <= threshold);
+                    break;
+                case TransformOperation.AddColumn:
+                    string newName = (col ?? "").Trim();
+                    if (newName.Length is < 1 or > 100 ||
+                        headers.Contains(newName, StringComparer.OrdinalIgnoreCase))
+                        throw new EtlValidationException($"Step {index + 1}: new column name must be unique and 1–100 characters.");
+                    headers.Add(newName);
+                    foreach (var row in rows) row.Values.Add(newName, step.To!);
+                    affected = rows.Count;
+                    break;
+                case TransformOperation.CopyColumn:
+                    string copyTarget = step.To!.Trim();
+                    if (copyTarget.Length is < 1 or > 100 ||
+                        headers.Contains(copyTarget, StringComparer.OrdinalIgnoreCase))
+                        throw new EtlValidationException($"Step {index + 1}: copy target must be a unique column name.");
+                    headers.Add(copyTarget);
+                    foreach (var row in rows) row.Values.Add(copyTarget, row.Values[col!]);
+                    affected = rows.Count;
+                    break;
+                case TransformOperation.SortAscending:
+                    var priorOrder = rows.Select(r => r.OriginalCsvRow).ToArray();
+                    rows = rows.OrderBy(r => r.Values[col!], StringComparer.OrdinalIgnoreCase)
+                        .ThenBy(r => r.OriginalCsvRow).ToList();
+                    affected = rows.Where((row, position) =>
+                        row.OriginalCsvRow != priorOrder[position]).Count();
+                    break;
+                case TransformOperation.ReplaceText:
+                    foreach (var row in rows)
+                    {
+                        string oldValue = row.Values[col!];
+                        string newValue = oldValue.Replace(step.From!, step.To!, StringComparison.Ordinal);
+                        if (oldValue != newValue) { row.Values[col!] = newValue; affected++; }
                     }
                     break;
                 default:

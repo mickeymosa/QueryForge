@@ -3,7 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>QueryForge — Trust your data</title>
+  <title>QueryForge — Data Trust Workspace</title>
+<link rel="stylesheet" href="/assets/qf-modern.css">
   <style>
     :root { color-scheme: light; font-family: Inter,system-ui,Segoe UI,Arial,sans-serif; background:#f4f7fa; color:#13273d; }
     * { box-sizing:border-box } body { margin:0 } button,input { font:inherit }
@@ -33,7 +34,7 @@
     .scroll { overflow:auto } small { color:#587188 } footer { margin:35px 0; text-align:center; color:#576b7b; font-size:.85rem }
   </style>
 </head>
-<body>
+<body class="qf-ui">
 <header><strong>◇ QueryForge</strong><p>Know what's wrong with your data before trusting the numbers.</p></header>
 <main>
   <div class="steps" aria-label="Three-step workflow">
@@ -42,16 +43,19 @@
     <div class="step"><span>3</span>Explore safely</div>
   </div>
   <section class="card" aria-labelledby="uploadTitle">
-    <h1 id="uploadTitle">Start with your data</h1>
+    <p class="qf-kicker">Data Trust Workspace · Local-first</p>
+    <h1 id="uploadTitle">Your data deserves a second look.</h1>
     <p class="muted">Upload a CSV to find missing values, duplicate IDs and invalid amounts. Everything runs on your own local installation. No AI account is needed.</p>
     <form id="uploadForm">
-      <label for="file">Choose a CSV file (maximum 1 MiB, 3,000 rows)</label>
-      <input id="file" type="file" accept=".csv,text/csv" required />
+      <label for="file">Choose a CSV file (maximum 25 MiB, 30,000 rows)</label>
+      <input id="file" type="file" accept=".csv,text/csv" required aria-describedby="fileInfo" />
+      <p class="qf-file-info" id="fileInfo">Choose a file or drag it onto the upload area. Max 25 MiB / 30,000 rows / 80 columns.</p>
       <div style="margin-top:17px">
         <button id="uploadBtn" type="submit">Analyze my file</button>
         <button id="sampleBtn" class="secondary" type="button">Try an example</button>
       </div>
     </form>
+    <div class="qf-progress" id="qfUploadProgress" aria-hidden="true" hidden><span></span></div>
     <p id="status" class="status" role="status" aria-live="polite"></p>
   </section>
 
@@ -165,5 +169,6 @@
     } catch(e) {setText('metricResult','Error: '+e.message);}
   });
 </script>
+<script src="/assets/qf-enhance.js" defer></script>
 </body>
 </html>

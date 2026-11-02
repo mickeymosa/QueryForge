@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>QueryForge — Clean your data</title>
+<title>QueryForge — Data Studio</title>
+<link rel="stylesheet" href="/assets/qf-modern.css">
 <style>
  :root{font-family:system-ui,Segoe UI,sans-serif;color:#13293e;background:#f4f8fb;line-height:1.5}
  *{box-sizing:border-box}body{margin:0}header{background:#102b46;color:#fff;padding:22px max(18px,calc((100vw - 960px)/2))}
@@ -28,11 +29,13 @@
  .scroll{overflow:auto}.detail{font-size:.9rem;color:#566d7c}
 </style>
 </head>
-<body>
+<body class="qf-ui">
 <header><strong>◇ QueryForge / Data preparation</strong> &nbsp; <a href="/">Back to upload</a></header>
 <main>
 <section class="card">
-<h1>Clean your data without writing code</h1>
+<p class="qf-kicker">Data Studio · v0.3</p>
+<h1>Build a transformation pipeline, visually.</h1>
+<div class="qf-workflow" aria-label="Data workflow"><span class="qf-pill active">1 · Configure</span><span class="qf-pill">2 · Preview</span><span class="qf-pill">3 · Save &amp; analyze</span></div>
 <p class="muted">Choose simple settings or create a custom sequence. Your original upload stays unchanged. Nothing is saved until you preview and approve the result.</p>
 <div id="source" class="message" role="status">Loading dataset…</div>
 <label for="pipelineName">Pipeline name</label>
@@ -60,7 +63,7 @@
   <datalist id="etlColumns"></datalist>
   <div id="stepList"></div>
   <button class="secondary" id="addStep" type="button">+ Add a transformation</button>
-  <p class="detail">At most 12 operations per pipeline. Replace matches whole cell values, not partial text.</p>
+  <p class="detail">At most 12 operations per pipeline. Use the ↑ ↓ buttons to change execution order. Whole-cell Replace and substring ReplaceText are different operations.</p>
 </div>
 <div style="margin-top:20px">
   <button id="previewBtn" type="button">Preview changes</button>
@@ -92,7 +95,7 @@
 const $=id=>document.getElementById(id);
 const datasetId=new URLSearchParams(location.search).get('dataset');
 let dataset=null, mode='simple', preview=null, appliedId=null;
-const operations=['Trim','Uppercase','Lowercase','Replace','FillMissing','DropMissing','DropDuplicates','RenameColumn'];
+const operations=['Trim','Uppercase','Lowercase','Replace','ReplaceText','FillMissing','DropMissing','DropDuplicates','RenameColumn','FilterEquals','FilterContains','FilterAmountAbove','AddColumn','CopyColumn','SortAscending'];
 function status(text,isError=false){$('message').textContent=text;$('message').className=isError?'message error':'message';}
 function invalidate(){preview=null;$('applyBtn').disabled=true;$('previewCard').classList.add('hidden');$('savedCard').classList.add('hidden');}
 function options(select,allowAll=false){
@@ -106,26 +109,48 @@ function control(tag,labelText,values){
  if(values){values.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;field.append(o);});}
  return {wrap,field};
 }
+function renumberSteps(){
+ Array.from($('stepList').children).forEach((node,i)=>{
+   const label=node.querySelector('.qf-step-title');if(label)label.textContent='Step '+(i+1);
+ });
+}
 function addStep(){
  if($('stepList').children.length>=12){status('Maximum 12 steps.',true);return;}
  const box=document.createElement('section');box.className='step';
  const head=document.createElement('div');head.className='stepHead';
- const title=document.createElement('strong');title.textContent='Transformation step';
- const remove=document.createElement('button');remove.type='button';remove.className='secondary';remove.textContent='Remove';
- remove.onclick=()=>{box.remove();invalidate();};head.append(title,remove);box.append(head);
+ const title=document.createElement('strong');title.className='qf-step-title';title.textContent='Transformation step';
+ const controls=document.createElement('div');controls.className='qf-step-buttons';
+ function move(label,direction){
+   const button=document.createElement('button');button.type='button';button.className='secondary qf-step-btn';
+   button.textContent=label;button.title=direction<0?'Move step up':'Move step down';
+   button.onclick=()=>{
+     if(direction<0 && box.previousElementSibling)box.previousElementSibling.before(box);
+     else if(direction>0 && box.nextElementSibling)box.nextElementSibling.after(box);
+     renumberSteps();invalidate();
+   };controls.append(button);
+ }
+ move('↑',-1);move('↓',1);
+ const remove=document.createElement('button');remove.type='button';remove.className='secondary qf-step-btn';remove.textContent='Remove';
+ remove.onclick=()=>{box.remove();renumberSteps();invalidate();};
+ controls.append(remove);head.append(title,controls);box.append(head);
  const grid=document.createElement('div');grid.className='layout';
  const op=control('select','Operation',operations),col=control('input','Column name (exact)'),from=control('input','Original value (Replace)'),to=control('input','New value / column name');
  col.field.type='text';col.field.setAttribute('list','etlColumns');col.field.placeholder='Blank means all columns for Trim';
  from.field.type=to.field.type='text';from.field.maxLength=to.field.maxLength=200;
- op.field.value='Trim';op.field.addEventListener('change',()=>{refresh();invalidate();});
- const refresh=()=>{const o=op.field.value;const all=o==='Trim';const needFrom=o==='Replace';
+ op.field.value='Trim';op.field.addEventListener('change',()=>{if(op.field.value==='AddColumn')col.field.value='';refresh();invalidate();});
+ const refresh=()=>{const o=op.field.value;const all=o==='Trim';
+ const needFrom=['Replace','ReplaceText','FilterEquals','FilterContains','FilterAmountAbove'].includes(o);
+ const needTo=['Replace','ReplaceText','FillMissing','RenameColumn','AddColumn','CopyColumn'].includes(o);
  col.wrap.classList.toggle('hidden',false);
- if(!all&&col.field.value==='')col.field.value=(dataset?.headers||[])[0]||'';
+ if(!all&&o!=='AddColumn'&&col.field.value==='')col.field.value=(dataset?.headers||[])[0]||'';
+ col.wrap.querySelector('label').textContent=o==='AddColumn'?'Name for new column':'Column name (exact)';
+ from.wrap.querySelector('label').textContent=o==='FilterAmountAbove'?'Minimum numeric threshold':'Match / original text';
+ to.wrap.querySelector('label').textContent=o==='AddColumn'?'Constant value':o==='CopyColumn'?'New copied column name':o==='RenameColumn'?'New header name':'New value / replacement';
  from.wrap.classList.toggle('hidden',!needFrom);
- to.wrap.classList.toggle('hidden',!['Replace','FillMissing','RenameColumn'].includes(o));};
+ to.wrap.classList.toggle('hidden',!needTo);};
  grid.append(op.wrap,col.wrap,from.wrap,to.wrap);box.append(grid);
- box._step=()=>({operation:op.field.value,column:col.field.value||null,from:from.field.value||null,to:to.field.value||null});
- $('stepList').append(box);refresh();
+ box._step=()=>({operation:op.field.value,column:col.field.value||null,from:from.field.value||null,to:to.field.value});
+ $('stepList').append(box);refresh();renumberSteps();
 }
 function buildRequest(){
  let steps=[];
