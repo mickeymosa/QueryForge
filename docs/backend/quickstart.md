@@ -45,7 +45,7 @@ docker compose down -v
 | GET | `/api/datasets/{id}/preview?limit=10` | First 1–50 source rows |
 | GET | `/api/datasets/{id}/metrics?column=amount` | Numeric sum and average for approved rows |
 
-All analysis is deterministic. There is **no LLM, free-form SQL execution, authentication, tenant isolation, or production database connector** in this milestone.
+All analysis is deterministic. When currency values vary, non-reference currency rows are flagged and excluded from the numeric summary; a future version will use user-approved currency policies. There is **no LLM, free-form SQL execution, authentication, tenant isolation, or production database connector** in this milestone.
 
 ## Architecture
 
@@ -62,3 +62,7 @@ Persistence uses serialized rows/report within a dataset record to simplify earl
 The Docker Compose ports bind to loopback (`127.0.0.1`) and contain demo-only credentials. Do **not** expose those ports to the Internet, upload confidential data, or consider the prototype production-ready.
 
 Before hosting publicly, implement authentication, authorization, CSRF controls for cookie-based sessions, database migrations, secrets management, tenant isolation, structured validation, security testing, retention/deletion policies, and a safe query execution layer.
+
+## Verified CI evidence (2 Nov 2026)
+
+GitHub Actions [backend smoke test](https://github.com/mickeymosa/QueryForge/actions/runs/41493511767) passed: .NET build, 12 unit tests, Docker Compose startup, PostgreSQL health, sample upload, mixed-currency checks and an expected 350.50 sum (two valid EUR rows; five excluded rows). This does not replace browser usability, security, or production load tests.
