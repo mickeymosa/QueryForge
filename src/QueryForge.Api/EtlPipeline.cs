@@ -236,11 +236,11 @@ public sealed class EtlPipeline
                     affected = rows.Count;
                     break;
                 case TransformOperation.SortAscending:
+                    var priorOrder = rows.Select(r => r.OriginalCsvRow).ToArray();
                     rows = rows.OrderBy(r => r.Values[col!], StringComparer.OrdinalIgnoreCase)
                         .ThenBy(r => r.OriginalCsvRow).ToList();
-                    // Count moved rows by tracking original index, not by claiming rows were edited.
-                    affected = rows.Where((row, position) => row.OriginalCsvRow !=
-                        (position < rowsBefore ? position + 2 : -1)).Count();
+                    affected = rows.Where((row, position) =>
+                        row.OriginalCsvRow != priorOrder[position]).Count();
                     break;
                 case TransformOperation.ReplaceText:
                     foreach (var row in rows)
