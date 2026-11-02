@@ -1,0 +1,74 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>QueryForge — Safe Large CSV Ingestion</title>
+<link rel="stylesheet" href="/assets/qf-modern.css">
+<style>
+.qf-ui .safe-stage{max-width:920px;margin:auto}
+.qf-ui .safe-info{border-left:4px solid #475ae0;padding:12px 16px;background:#edf1ff;border-radius:9px;margin:15px 0}
+.qf-ui .safe-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px}
+.qf-ui .safe-stat{background:#eff4ff;border:1px solid #dce6fd;padding:13px;border-radius:12px}
+.qf-ui .safe-stat strong{display:block;font-size:1.45rem;color:#3349cc}
+.qf-ui .safe-table{overflow:auto;max-height:480px}
+.qf-ui .safe-table table{border-collapse:collapse;width:100%}
+.qf-ui .safe-table th,.qf-ui .safe-table td{border-bottom:1px solid #dce4f3;padding:9px;text-align:left;white-space:nowrap}
+.qf-ui .safe-actions{display:flex;gap:10px;flex-wrap:wrap}
+</style></head><body class="qf-ui">
+<header><strong>◇ QueryForge / Safe Ingestion</strong><p>Bounded CSV import into PostgreSQL — without a whole-dataset JSON blob.</p></header>
+<main class="safe-stage">
+<section class="card">
+<p class="qf-kicker">Engineering milestone v0.5</p><h1>Import larger datasets safely.</h1>
+<p class="muted">This new ingestion engine reads CSV incrementally and stores rows separately. The original Data Studio remains available for smaller datasets while we migrate ETL and chart calculations to streaming processing.</p>
+<div class="safe-info"><strong>Current v2 limits:</strong> 25 MiB · 30,000 rows · 80 columns · one active import per API instance.<p>Local-only, no authentication. Do not upload confidential data. This is not a production deployment.</p></div>
+<form id="form"><label for="file">Select a CSV file (up to 25 MiB)</label>
+<input type="file" id="file" accept=".csv,text/csv" required>
+<div class="safe-actions" style="margin:14px 0"><button id="importBtn">Import into row storage</button><a href="/">Return to Data Studio</a></div></form>
+<p role="status" aria-live="polite" id="status">No file imported.</p>
+</section>
+<section class="card hidden" id="datasetPanel">
+<h2>Imported dataset</h2><div class="safe-stats" id="stats"></div>
+<p class="qf-note" id="identity"></p>
+<h2>Database-backed paged preview</h2>
+<p class="muted">The server returns at most 100 rows per page. It never sends the entire dataset to the browser.</p>
+<div class="safe-table" id="table"></div>
+<div class="safe-actions" style="margin:14px 0"><button id="prev" class="secondary" disabled>Previous page</button><button id="next" class="secondary" disabled>Next page</button></div>
+<p id="pageMeta" class="qf-note"></p>
+<div class="safe-info">Advanced ETL and charts for large imported datasets are <strong>not enabled yet</strong>. Those processors must be converted to operate on bounded batches; using the legacy API here would reintroduce memory exhaustion.</div>
+</section></main>
+<script>
+(()=>{const $=id=>document.getElementById(id);let dataset=null,offset=0;
+function stat(label,value){const div=document.createElement('div');div.className='safe-stat';
+const b=document.createElement('strong');b.textContent=value;
+const text=document.createElement('span');text.textContent=label;div.append(b,text);return div}
+async function page(){
+  if(!dataset)return;
+  const r=await fetch('/api/v2/datasets/'+dataset.id+'/rows?offset='+offset+'&limit=25');
+  const data=await r.json();if(!r.ok)throw Error(data.error||'Preview unavailable');
+  const table=document.createElement('table'),header=document.createElement('tr');
+  dataset.headers.forEach(name=>{const th=document.createElement('th');th.textContent=name;header.append(th)});
+  const thead=document.createElement('thead');thead.append(header);table.append(thead);
+  const tbody=document.createElement('tbody');
+  data.rows.forEach(row=>{const tr=document.createElement('tr');
+    dataset.headers.forEach(key=>{const td=document.createElement('td');td.textContent=row[key]??'';tr.append(td)});tbody.append(tr)});
+  table.append(tbody);$('table').replaceChildren(table);
+  $('prev').disabled=offset===0;$('next').disabled=!data.hasMore;
+  $('pageMeta').textContent='Showing rows '+(data.rows.length?offset+1:0)+'–'+(offset+data.rows.length)+' of '+data.totalRows;
+}
+$('form').onsubmit=async e=>{e.preventDefault();const f=$('file').files[0];if(!f)return;
+ if(f.size<1||f.size>25*1024*1024||!f.name.toLowerCase().endsWith('.csv')){
+ $('status').textContent='Choose a .csv file between 1 byte and 25 MiB.';return}
+ $('importBtn').disabled=true;$('status').textContent='Streaming rows to PostgreSQL…';
+ try{const body=new FormData();body.append('file',f);
+ const response=await fetch('/api/v2/datasets',{method:'POST',body});
+ const d=await response.json();if(!response.ok)throw Error(d.error||d.title||'Import rejected');
+ dataset=d;offset=0;$('datasetPanel').classList.remove('hidden');
+ $('stats').replaceChildren(stat('Rows',d.rowCount.toLocaleString()),stat('Columns',d.headers.length),
+ stat('Missing cells',d.missingValues.toLocaleString()),stat('Duplicate keys',d.duplicateIds.toLocaleString()));
+ $('identity').textContent='Dataset ID '+d.id+' · SHA-256 '+d.sha256;
+ await page();$('status').textContent='Import complete. Rows are paginated in PostgreSQL.'
+ }catch(ex){$('status').textContent='Import not completed: '+ex.message}
+ finally{$('importBtn').disabled=false}
+};
+$('next').onclick=async()=>{offset+=25;try{await page()}catch(ex){$('status').textContent=ex.message}};
+$('prev').onclick=async()=>{offset=Math.max(0,offset-25);try{await page()}catch(ex){$('status').textContent=ex.message}};
+})();
+</script></body></html>
