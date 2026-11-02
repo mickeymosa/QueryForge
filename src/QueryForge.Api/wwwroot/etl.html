@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>QueryForge — Data Studio</title>
 <link rel="stylesheet" href="/assets/qf-modern.css">
+<link rel="stylesheet" href="/assets/qf-etl-canvas.css">
 <style>
  :root{font-family:system-ui,Segoe UI,sans-serif;color:#13293e;background:#f4f8fb;line-height:1.5}
  *{box-sizing:border-box}body{margin:0}header{background:#102b46;color:#fff;padding:22px max(18px,calc((100vw - 960px)/2))}
@@ -61,7 +62,12 @@
 <div id="advanced" class="hidden">
   <p class="muted">Steps run from top to bottom. Type an exact column name when referring to a header renamed by an earlier step. Available operations are allowlisted: no custom scripts, hidden AI transforms or arbitrary SQL.</p>
   <datalist id="etlColumns"></datalist>
-  <div id="stepList"></div>
+  <div class="studio-pipeline-container" style="padding:16px 0">
+  <h3 style="margin:7px 0;font-size:1rem">Visual execution flow</h3>
+  <p class="qf-note">Click any step to jump to its settings. Steps execute left-to-right; up/down controls change their order. This is a linear pipeline, not a branching DAG.</p>
+  <div id="etlCanvas" role="group" aria-label="Current ETL execution flow" class="qf-etl-lane"></div>
+</div>
+<div id="stepList"></div>
   <button class="secondary" id="addStep" type="button">+ Add a transformation</button>
   <p class="detail">At most 12 operations per pipeline. Use the ↑ ↓ buttons to change execution order. Whole-cell Replace and substring ReplaceText are different operations.</p>
 </div>
@@ -89,6 +95,7 @@
   <button id="analyzeBtn" type="button">Calculate</button>
   <p id="analyzeResult" role="status" aria-live="polite"></p>
   <a id="continueLink" href="#">Transform this version again</a>
+  <p><a id="analyticsLink" href="/analytics.html" class="qf-button" style="display:inline-block;padding:11px 16px;text-decoration:none;margin-top:10px">Visualize and report on this version</a></p>
 </section>
 </main>
 <script>
@@ -221,7 +228,7 @@ $('applyBtn').onclick=async()=>{
   status('Saving a new version. Original data is not changed…');
   const data=await callApi('/api/datasets/'+datasetId+'/etl/apply',
    {...preview.request,previewFingerprint:preview.token});
-  appliedId=data.id;$('savedCard').classList.remove('hidden');
+  appliedId=data.id;$('analyticsLink').href='/analytics.html?dataset='+encodeURIComponent(data.id);$('savedCard').classList.remove('hidden');
   $('savedInfo').textContent='Created dataset '+data.id+' · '+data.rowCount+' rows · '+data.quality.issues.length+' remaining issues.';
   options($('metricColumn'));const amount=data.headers.find(h=>h.toLowerCase()==='amount');
   if(amount)$('metricColumn').value=amount;
@@ -239,4 +246,5 @@ $('analyzeBtn').onclick=async()=>{
 };
 load();
 </script>
+<script src="/assets/qf-etl-canvas.js" defer></script>
 </body></html>

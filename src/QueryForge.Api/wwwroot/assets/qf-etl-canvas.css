@@ -1,0 +1,11 @@
+.qf-etl-lane{display:flex;align-items:center;gap:8px;overflow-x:auto;padding:12px 8px 18px;
+  border:1px solid #dfe6f6;border-radius:14px;background:linear-gradient(120deg,#f8faff,#eef8fb)}
+.qf-ui .qf-etl-node{flex:0 0 auto;min-height:51px;min-width:105px;background:white;color:#314d7d;
+  border:1px solid #bdcaed;border-radius:12px;box-shadow:0 4px 14px rgba(50,72,114,.05);font-size:.83rem}
+.qf-ui .qf-etl-node.transform{color:white;background:linear-gradient(120deg,#4657e6,#3442b6);border:0}
+.qf-ui .qf-etl-node.source{color:#146570;background:#e4f5f3}
+.qf-ui .qf-etl-node.validation{color:#176759;background:#e4f7e9}
+.qf-ui .qf-etl-node.save{color:#72521b;background:#fff4d9}
+.qf-ui .qf-etl-node:disabled{opacity:1;cursor:default}
+.qf-ui .qf-etl-arrow{font-size:1.3rem;color:#7889a8;flex:0 0 auto}
+.qf-ui .qf-node-highlight{outline:3px solid #efb34e;outline-offset:4px}

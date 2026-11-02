@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#121b4a">
+<title>QueryForge — Analytics Studio</title>
+<link rel="stylesheet" href="/assets/qf-modern.css">
+<link rel="stylesheet" href="/assets/qf-report-print.css" media="print">
+<style>
+.qf-ui .studio-grid{display:grid;grid-template-columns:minmax(0,1.8fr) minmax(240px,.8fr);gap:18px}
+.qf-ui .studio-toolbar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px;align-items:end}
+.qf-ui .studio-hero{padding:32px 0 16px}
+.qf-ui .studio-hero h1{margin:6px 0}
+.qf-ui .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:20px 0}
+.qf-ui .kpi{border:1px solid #dde5f6;border-radius:15px;padding:17px;background:linear-gradient(130deg,#fff,#eff3ff)}
+.qf-ui .kpi strong{font-size:clamp(1.35rem,2vw,2rem);display:block;letter-spacing:-.055em;color:#374fd4}
+.qf-ui .kpi span{font-size:.78rem;color:#64718e}
+.qf-ui .studio-chart-scroll{overflow-x:auto;border:1px solid #e1e8f8;border-radius:15px;background:#fbfcff}
+.qf-ui #chartSvg{width:100%;min-width:650px;display:block}
+.qf-ui .chart-legend{font-size:.83rem;color:#5e6e87;margin-top:9px;line-height:1.55}
+.qf-ui .studio-summary{font-size:1rem;line-height:1.8;color:#263e59;padding:16px;background:#f3f6ff;border:1px solid #e2e7f6;border-radius:12px}
+.qf-ui .studio-evidence{font-size:.85rem;color:#5a6c87}
+.qf-ui .studio-tags{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.qf-ui .studio-tag{border:1px solid #dbe3f6;background:#f0f4ff;color:#3751a0;padding:7px 11px;font-size:.82rem;border-radius:20px;cursor:pointer}
+.qf-ui .studio-tag:hover{background:#e1eaff}
+.qf-ui .studio-advice{padding:13px;border-bottom:1px solid #e5eafb}
+.qf-ui .studio-advice strong{display:block;color:#263974}
+.qf-ui .studio-advice p{margin:5px 0;color:#596b88;font-size:.88rem}
+.qf-ui .studio-tag:focus-visible{outline:3px solid orange}
+.qf-ui .studio-toplinks{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.qf-ui .studio-toplinks a{padding:8px 12px;border:1px solid #dce4f8;border-radius:10px;text-decoration:none;color:#3550b9;background:#fff;font-weight:650;font-size:.89rem}
+@media(max-width:850px){.qf-ui .studio-grid{grid-template-columns:1fr}}
+@media(max-width:570px){.qf-ui .studio-toolbar{grid-template-columns:1fr}}
+</style></head>
+<body class="qf-ui">
+<header><strong>◇ QueryForge <span style="opacity:.7;font-weight:400">/ Analytics Studio</span></strong>
+<p>Charts, quality evidence, and explainable reporting — on your local machine.</p></header>
+<main>
+<section class="studio-hero">
+<p class="qf-kicker">Data Studio · v0.4 · Local prototype</p>
+<h1>Understand your data, visually.</h1>
+<p class="muted">Explore a dataset, choose a chart, and see an evidence-based summary. You can return to ETL at any time.</p>
+<div class="studio-toplinks"><a href="/">Upload a dataset</a><a id="etlLink" href="/">Open ETL workflow</a></div>
+</section>
+<div id="pageStatus" class="message" role="status" aria-live="polite">Loading your dataset…</div>
+<section class="kpi-grid" aria-label="Dataset quality metrics" id="kpis"></section>
+<section class="studio-grid">
+ <div>
+  <section class="card">
+   <h2>Explore a chart</h2>
+   <p class="muted">Recommendations are generated from source data structure; you always control the chart and quality policy.</p>
+   <div class="studio-tags" id="suggestions"></div>
+   <div class="studio-toolbar">
+    <div><label for="chartKind">Chart type</label><select id="chartKind">
+      <option value="CountByCategory">Count by category</option>
+      <option value="Histogram">Numeric distribution</option>
+      <option value="SumByCategory">Sum by category</option></select></div>
+    <div><label for="column">Category or numeric column</label><select id="column"></select></div>
+    <div><label for="measure">Numeric measure (for sums)</label><select id="measure"></select></div>
+    <div><label for="topN">Maximum categories / bins</label><select id="topN">
+      <option value="5">5</option><option value="8" selected>8</option><option value="12">12</option><option value="20">20</option></select></div>
+   </div>
+   <label style="margin:16px 0"><input type="checkbox" id="excludeFlagged" checked> Exclude rows with quality issues from charts</label>
+   <button id="buildBtn" type="button">Build chart</button>
+   <button id="exportChartBtn" type="button" class="secondary" disabled>Download chart data (.json)</button>
+   <p class="qf-note">The API calculates aggregates; the browser only renders the returned values.</p>
+   <div id="chartStatus" class="message" role="status" aria-live="polite">Select a chart to see results.</div>
+   <div class="studio-chart-scroll" style="margin-top:12px"><svg id="chartSvg" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="No chart loaded" viewBox="0 0 900 280"></svg></div>
+   <div id="chartNotes" class="chart-legend"></div>
+  </section>
+ </div>
+ <aside>
+  <section class="card">
+   <p class="qf-eyebrow">Evidence advisor</p>
+   <h2>Report-ready summary</h2>
+   <p class="muted">A deterministic report based on validated data. Not generated by an AI model.</p>
+   <p id="executiveSummary" class="studio-summary">Loading…</p>
+   <h2>Recommended next actions</h2>
+   <div id="advice"></div>
+   <h2 style="margin-top:20px">Evidence</h2>
+   <div id="evidence" class="studio-evidence"></div>
+   <p class="qf-note">All suggested ETL operations require your own preview and approval.</p>
+   <button id="reportBtn" class="secondary" type="button" disabled>Download evidence report (.json)</button>
+   <button id="printBtn" class="secondary" type="button" disabled>Print / Save as PDF</button>
+  </section>
+ </aside>
+</section>
+<p class="qf-note">Local-only development prototype. No authentication or public deployment. Do not upload sensitive information.</p>
+</main>
+<script src="/assets/qf-analytics.js" defer></script>
+</body></html>
