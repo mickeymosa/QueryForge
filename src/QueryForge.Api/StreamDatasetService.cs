@@ -30,7 +30,8 @@ public sealed class StreamDatasetService(NpgsqlDataSource dataSource)
     public const int MaxDataRows = 30_000;
     public const int MaxColumns = 80;
     private const int BatchSize = 200;
-    private const int MaxCellChars = 262_144;
+    private const int MaxCellChars = 16_384;
+    private const int MaxRowChars = 65_536;
     private static readonly SemaphoreSlim ImportSlots = new(1, 1);
 
     // Compatibility migration: works against existing v0.4 volumes. Explicit,
@@ -149,11 +150,15 @@ public sealed class StreamDatasetService(NpgsqlDataSource dataSource)
                 throw new InvalidDataException($"CSV record {count} has the wrong field count.");
 
             var row = new Dictionary<string,string>(headers.Length,StringComparer.Ordinal);
+            int rowCharacters = 0;
             for (int column = 0; column < headers.Length; column++)
             {
                 string cell = csv.GetField(column) ?? "";
                 if (cell.Length > MaxCellChars)
-                    throw new InvalidDataException($"CSV record {count} contains a cell exceeding 262,144 characters.");
+                    throw new InvalidDataException($"CSV record {count} contains a cell exceeding 16,384 characters.");
+                rowCharacters += cell.Length;
+                if (rowCharacters > MaxRowChars)
+                    throw new InvalidDataException($"CSV record {count} exceeds the 65,536-character row limit.");
                 row[headers[column]] = cell;
                 if (string.IsNullOrWhiteSpace(cell)) missing[column]++;
                 else filled[column]++;
@@ -161,7 +166,13 @@ public sealed class StreamDatasetService(NpgsqlDataSource dataSource)
             if (idColumn is not null)
             {
                 string key = row[idColumn].Trim();
-                if (key.Length > 0 && !seenIds.Add(key)) duplicates++;
+                // Fixed-width digest keeps duplicate detection bounded even for long keys.
+                if (key.Length > 0)
+                {
+                    var digest = Convert.ToHexString(SHA256.HashData(
+                        Encoding.UTF8.GetBytes(key.ToUpperInvariant())));
+                    if (!seenIds.Add(digest)) duplicates++;
+                }
             }
             batch.Add((count, JsonSerializer.Serialize(row)));
             if (batch.Count == BatchSize)
