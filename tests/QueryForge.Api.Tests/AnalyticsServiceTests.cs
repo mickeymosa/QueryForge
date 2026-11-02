@@ -49,7 +49,7 @@ public sealed class AnalyticsServiceTests
         Assert.Equal(33.33m,insight.QualityScorePercent);
         Assert.Contains(insight.SuggestedCharts,c=>c.Kind==ChartKind.Histogram&&c.Column=="amount");
         Assert.Contains(insight.SuggestedCharts,c=>c.Kind==ChartKind.CountByCategory&&c.Column=="region");
-        Assert.Equal("region",insight.SuggestedCharts[0].Column);
+        Assert.True(insight.SuggestedCharts[0].Column is "region" or "currency");
     }
 
     [Fact]

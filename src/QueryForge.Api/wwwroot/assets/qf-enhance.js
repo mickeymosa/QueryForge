@@ -8,14 +8,14 @@
   const progress = document.getElementById('qfUploadProgress');
   if (!fileInput || !uploadForm || !fileInfo || !status || !progress) return;
 
-  const maxBytes = 25 * 1024 * 1024;
+  const maxBytes = 2 * 1024 * 1024;
   const filename = file => file.name.length > 80 ? file.name.slice(0, 77) + '…' : file.name;
 
   function showSelection() {
     const file = fileInput.files?.[0];
     const submit = document.getElementById('uploadBtn');
     if (!file) {
-      fileInfo.textContent = 'Choose a file or drag it here. Max 25 MiB / 30,000 rows / 80 columns.';
+      fileInfo.textContent = 'Choose a file or drag it here. Max 2 MiB / 3,000 rows / 40 columns.';
       if (submit) submit.disabled = false;
       return;
     }
@@ -25,7 +25,7 @@
     const wrongType = !file.name.toLowerCase().endsWith('.csv');
     if (submit) submit.disabled = tooLarge || wrongType;
     if (tooLarge || wrongType) {
-      status.textContent = tooLarge ? 'File must be between 1 byte and 25 MiB.' : 'Please choose a .csv file.';
+      status.textContent = tooLarge ? 'File must be between 1 byte and 2 MiB.' : 'Please choose a .csv file.';
       status.style.color = '#a63b43';
     } else {
       status.textContent = 'Ready to upload and check your data.';
@@ -68,5 +68,5 @@
   observer.observe(status, {childList: true, characterData: true, subtree: true});
 
   // Keep the drop zone informative for keyboard-only users.
-  fileInput.setAttribute('title','Upload a CSV file, up to 25 MiB');
+  fileInput.setAttribute('title','Upload a CSV file, up to 2 MiB');
 })();
