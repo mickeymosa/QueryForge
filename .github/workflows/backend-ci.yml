@@ -66,6 +66,7 @@ jobs:
           curl -fsS -H 'Content-Type: application/json' --data-binary @/tmp/etl-request.json \
             "http://127.0.0.1:5080/api/datasets/$ID/etl/preview" > /tmp/etl-preview.json
           jq -e '.rowCountBefore == 7 and .rowCountAfter == 6 and .audit[1].affectedRows == 1' /tmp/etl-preview.json
+          jq -e '.audit[0].affectedRows >= 1' /tmp/etl-preview.json
           PREVIEW_HASH=$(jq -r '.previewFingerprint' /tmp/etl-preview.json)
           jq --arg hash "$PREVIEW_HASH" '. + {previewFingerprint: $hash}' \
             /tmp/etl-request.json > /tmp/etl-apply.json
