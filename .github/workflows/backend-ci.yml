@@ -59,6 +59,8 @@ jobs:
           ID=$(jq -r '.id' /tmp/upload.json)
           curl -fsS "http://127.0.0.1:5080/api/datasets/$ID/metrics?column=amount" > /tmp/metric.json
           jq -e '.metric.includedRows == 2 and .metric.excludedRows == 5 and .metric.sum == 350.5' /tmp/metric.json
+          curl -fsS http://127.0.0.1:5080/api/datasets > /tmp/datasets-before-etl.json
+          BEFORE_COUNT=$(jq 'length' /tmp/datasets-before-etl.json)
           echo 'Preparing the ETL pipeline'
           cat > /tmp/etl-request.json <<'JSON'
           {"pipelineName":"Demo Basic ETL","steps":[{"operation":"Trim"},{"operation":"DropDuplicates","column":"order_id"}]}
@@ -67,6 +69,8 @@ jobs:
             "http://127.0.0.1:5080/api/datasets/$ID/etl/preview" > /tmp/etl-preview.json
           jq -e '.rowCountBefore == 7 and .rowCountAfter == 6 and .audit[1].affectedRows == 1' /tmp/etl-preview.json
           jq -e '.audit[0].affectedRows >= 1' /tmp/etl-preview.json
+          curl -fsS http://127.0.0.1:5080/api/datasets > /tmp/datasets-after-preview.json
+          test "$(jq 'length' /tmp/datasets-after-preview.json)" -eq "$BEFORE_COUNT"
           PREVIEW_HASH=$(jq -r '.previewFingerprint' /tmp/etl-preview.json)
           jq --arg hash "$PREVIEW_HASH" '. + {previewFingerprint: $hash}' \
             /tmp/etl-request.json > /tmp/etl-apply.json
@@ -75,6 +79,10 @@ jobs:
           jq -e --arg original "$ID" \
             '.rowCount == 6 and .sourceDatasetId == $original and .quality.lineage.parentDatasetId == $original' \
             /tmp/etl-saved.json
+          curl -fsS "http://127.0.0.1:5080/api/datasets/$ID/preview?limit=1" > /tmp/unaltered-source.json
+          jq -e '.rows[0].customer == " Ahmed "' /tmp/unaltered-source.json
+          curl -fsS http://127.0.0.1:5080/api/datasets > /tmp/datasets-after-apply.json
+          test "$(jq 'length' /tmp/datasets-after-apply.json)" -eq "$((BEFORE_COUNT+1))"
           DERIVED_ID=$(jq -r '.id' /tmp/etl-saved.json)
           curl -fsS "http://127.0.0.1:5080/api/datasets/$DERIVED_ID" > /tmp/etl-loaded.json
           jq -e '.quality.lineage.originalRowNumbers | length == 6' /tmp/etl-loaded.json
