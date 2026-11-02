@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>QueryForge — Clean your data</title>
+<style>
+ :root{font-family:system-ui,Segoe UI,sans-serif;color:#13293e;background:#f4f8fb;line-height:1.5}
+ *{box-sizing:border-box}body{margin:0}header{background:#102b46;color:#fff;padding:22px max(18px,calc((100vw - 960px)/2))}
+ header a{color:#c9ecf6}main{max-width:960px;margin:auto;padding:26px 18px}
+ h1{font-size:1.7rem;margin:0 0 6px}h2{font-size:1.15rem;margin-top:0}
+ .card{background:#fff;border:1px solid #d9e5ed;border-radius:15px;padding:23px;margin-bottom:20px;box-shadow:0 8px 20px #122d4b0a}
+ .muted{color:#53697a}.layout{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+ button,select,input{font:inherit}input[type=text],select{border:1px solid #afc3ce;border-radius:8px;padding:10px;width:100%;background:#fff}
+ button{background:#066985;border:0;color:white;padding:11px 16px;border-radius:9px;cursor:pointer;font-weight:650}
+ button.secondary{background:#eaf2f6;color:#125169}button:disabled{opacity:.45;cursor:not-allowed}
+ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #dcaa3c;outline-offset:2px}
+ label{display:block;font-weight:600;margin:9px 0 5px}label.check{font-weight:normal;padding:10px 0}
+ .mode{display:flex;gap:8px;margin:12px 0}.mode button[aria-pressed=true]{background:#102b46}
+ .mode button[aria-pressed=false]{background:#e5eff4;color:#24465c}
+ .hidden{display:none}.step{border:1px solid #d6e3e9;border-radius:11px;padding:15px;margin:12px 0}
+ .step .layout{align-items:end}.stepHead{display:flex;justify-content:space-between;gap:10px;align-items:center}
+ .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+ .stats div{background:#eef7fa;border-radius:10px;padding:14px}.stats b{font-size:1.5rem;display:block}
+ .message{padding:12px;border-radius:8px;background:#edf5fa;white-space:pre-line}
+ .error{background:#fff0ec;color:#9b3434}.ok{background:#ecf7ee;color:#205e39}
+ table{border-collapse:collapse;width:100%;font-size:.88rem}td,th{border-bottom:1px solid #dbe6ee;padding:9px;text-align:left;overflow-wrap:anywhere}
+ .scroll{overflow:auto}.detail{font-size:.9rem;color:#566d7c}
+</style>
+</head>
+<body>
+<header><strong>◇ QueryForge / Data preparation</strong> &nbsp; <a href="/">Back to upload</a></header>
+<main>
+<section class="card">
+<h1>Clean your data without writing code</h1>
+<p class="muted">Choose simple settings or create a custom sequence. Your original upload stays unchanged. Nothing is saved until you preview and approve the result.</p>
+<div id="source" class="message" role="status">Loading dataset…</div>
+<label for="pipelineName">Pipeline name</label>
+<input id="pipelineName" type="text" maxlength="80" value="My cleaning pipeline" />
+<div class="mode" role="group" aria-label="ETL difficulty">
+  <button id="simpleMode" type="button" aria-pressed="true">Simple mode</button>
+  <button id="advancedMode" type="button" aria-pressed="false">Advanced mode</button>
+</div>
+<div id="simple">
+  <p class="muted">Only trimming whitespace is enabled by default. Removing rows is optional and always previewed.</p>
+  <label class="check"><input id="doTrim" type="checkbox" checked /> Remove surrounding spaces from cells</label>
+  <div class="layout">
+    <div>
+      <label class="check"><input id="doDedupe" type="checkbox" /> Remove later duplicate IDs</label>
+      <label for="dedupeColumn">Identifier column</label><select id="dedupeColumn"></select>
+    </div>
+    <div>
+      <label class="check"><input id="doDropMissing" type="checkbox" /> Remove rows with an empty value</label>
+      <label for="missingColumn">Required column</label><select id="missingColumn"></select>
+    </div>
+  </div>
+</div>
+<div id="advanced" class="hidden">
+  <p class="muted">Steps run from top to bottom. Available operations are allowlisted: no custom scripts, hidden AI transforms or arbitrary SQL.</p>
+  <div id="stepList"></div>
+  <button class="secondary" id="addStep" type="button">+ Add a transformation</button>
+  <p class="detail">At most 12 operations per pipeline. Replace matches whole cell values, not partial text.</p>
+</div>
+<div style="margin-top:20px">
+  <button id="previewBtn" type="button">Preview changes</button>
+  <button id="applyBtn" type="button" disabled>Approve &amp; save new dataset</button>
+</div>
+<p id="message" class="message" role="status" aria-live="polite">Preview first. No changes have been applied.</p>
+</section>
+<section id="previewCard" class="card hidden" aria-labelledby="previewTitle">
+  <h2 id="previewTitle">Before and after</h2>
+  <div id="stats" class="stats"></div>
+  <h2 style="margin-top:20px">What each step changed</h2>
+  <div id="audit"></div>
+  <h2 style="margin-top:20px">Preview (first eight rows)</h2>
+  <div class="scroll" id="previewTable"></div>
+  <p class="detail" id="fingerprint"></p>
+</section>
+<section id="savedCard" class="card hidden">
+  <h2>Saved as a new dataset</h2>
+  <p id="savedInfo" class="message ok"></p>
+  <p class="muted">Your original dataset is preserved. This new dataset records its source ID and the transformation history.</p>
+  <label for="metricColumn">Quick numeric summary of saved data</label>
+  <select id="metricColumn"></select>
+  <button id="analyzeBtn" type="button">Calculate</button>
+  <p id="analyzeResult" role="status" aria-live="polite"></p>
+  <a id="continueLink" href="#">Transform this version again</a>
+</section>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const datasetId=new URLSearchParams(location.search).get('dataset');
+let dataset=null, mode='simple', preview=null, appliedId=null;
+const operations=['Trim','Uppercase','Lowercase','Replace','FillMissing','DropMissing','DropDuplicates','RenameColumn'];
+function status(text,isError=false){$('message').textContent=text;$('message').className=isError?'message error':'message';}
+function invalidate(){preview=null;$('applyBtn').disabled=true;$('previewCard').classList.add('hidden');$('savedCard').classList.add('hidden');}
+function options(select,allowAll=false){
+ select.replaceChildren();
+ if(allowAll){let o=document.createElement('option');o.value='';o.textContent='All columns';select.append(o);}
+ (dataset?.headers||[]).forEach(h=>{const o=document.createElement('option');o.value=h;o.textContent=h;select.append(o);});
+}
+function control(tag,labelText,values){
+ const wrap=document.createElement('div'),label=document.createElement('label'),field=document.createElement(tag);
+ label.textContent=labelText;wrap.append(label,field);
+ if(values){values.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;field.append(o);});}
+ return {wrap,field};
+}
+function addStep(){
+ if($('stepList').children.length>=12){status('Maximum 12 steps.',true);return;}
+ const box=document.createElement('section');box.className='step';
+ const head=document.createElement('div');head.className='stepHead';
+ const title=document.createElement('strong');title.textContent='Transformation step';
+ const remove=document.createElement('button');remove.type='button';remove.className='secondary';remove.textContent='Remove';
+ remove.onclick=()=>{box.remove();invalidate();};head.append(title,remove);box.append(head);
+ const grid=document.createElement('div');grid.className='layout';
+ const op=control('select','Operation',operations),col=control('select','Column'),from=control('input','Original value (Replace)'),to=control('input','New value / column name');
+ options(col.field,true);from.field.type=to.field.type='text';from.field.maxLength=to.field.maxLength=200;
+ op.field.value='Trim';op.field.addEventListener('change',()=>{refresh();invalidate();});
+ const refresh=()=>{const o=op.field.value;const all=o==='Trim';const needFrom=o==='Replace';
+ col.wrap.classList.toggle('hidden',false);
+ if(!all&&col.field.value==='')col.field.selectedIndex=1;
+ from.wrap.classList.toggle('hidden',!needFrom);
+ to.wrap.classList.toggle('hidden',!['Replace','FillMissing','RenameColumn'].includes(o));};
+ grid.append(op.wrap,col.wrap,from.wrap,to.wrap);box.append(grid);
+ box._step=()=>({operation:op.field.value,column:col.field.value||null,from:from.field.value||null,to:to.field.value||null});
+ $('stepList').append(box);refresh();
+}
+function buildRequest(){
+ let steps=[];
+ if(mode==='simple'){
+  if($('doTrim').checked)steps.push({operation:'Trim'});
+  if($('doDropMissing').checked)steps.push({operation:'DropMissing',column:$('missingColumn').value});
+  if($('doDedupe').checked)steps.push({operation:'DropDuplicates',column:$('dedupeColumn').value});
+ }else{steps=Array.from($('stepList').children,el=>el._step());}
+ return {pipelineName:$('pipelineName').value.trim(),steps};
+}
+function stat(label,n){const d=document.createElement('div'),b=document.createElement('b'),s=document.createElement('span');b.textContent=n;s.textContent=label;d.append(b,s);return d;}
+function showTable(data,columns){
+ const table=document.createElement('table'),head=document.createElement('tr');
+ ['Original row',...columns].forEach(h=>{const th=document.createElement('th');th.textContent=h;head.append(th);});
+ const thd=document.createElement('thead');thd.append(head);table.append(thd);
+ const body=document.createElement('tbody');
+ data.forEach(item=>{const tr=document.createElement('tr');const first=document.createElement('td');first.textContent=item.originalCsvRow;tr.append(first);
+ columns.forEach(h=>{const td=document.createElement('td');td.textContent=item.values[h]??'';tr.append(td);});body.append(tr);});
+ table.append(body);$('previewTable').replaceChildren(table);
+}
+async function callApi(url,body){
+ const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+ const data=await r.json();if(!r.ok)throw new Error(data.error||data.title||'Request failed');
+ return data;
+}
+async function load(){
+ if(!datasetId){$('source').textContent='No dataset selected. First upload a CSV on the homepage.';$('previewBtn').disabled=true;return;}
+ try{
+  const res=await fetch('/api/datasets/'+encodeURIComponent(datasetId));
+  if(!res.ok)throw new Error('Dataset could not be loaded.');
+  dataset=await res.json();
+  $('source').textContent=dataset.fileName+' · '+dataset.rowCount+' rows · '+dataset.headers.length+' columns. ID: '+dataset.id;
+  options($('dedupeColumn'));options($('missingColumn'));addStep();
+  const id=dataset.headers.find(h=>['order_id','id'].includes(h.toLowerCase()));if(id)$('dedupeColumn').value=id;
+  const key=dataset.headers.find(h=>h.toLowerCase()==='customer');if(key)$('missingColumn').value=key;
+ }catch(e){$('source').textContent=e.message;$('previewBtn').disabled=true;}
+}
+function displayPreview(data){
+ $('previewCard').classList.remove('hidden');
+ $('stats').replaceChildren(
+  stat('Rows before',data.rowCountBefore),stat('Rows after',data.rowCountAfter),
+  stat('Issues before',data.originalQuality.issues.length),stat('Issues after',data.proposedQuality.issues.length));
+ $('audit').replaceChildren();
+ data.audit.forEach(a=>{const p=document.createElement('p');p.textContent=
+ 'Step '+a.step+' — '+a.operation+(a.column?' ('+a.column+')':'')+': '+a.affectedRows+' affected; '+a.rowsBefore+' → '+a.rowsAfter+' rows.';$('audit').append(p);});
+ showTable(data.sample,data.headers);
+ $('fingerprint').textContent='Preview fingerprint: '+data.previewFingerprint+' · Transformed data SHA-256: '+data.dataSha256;
+}
+$('simpleMode').onclick=()=>{mode='simple';$('simple').classList.remove('hidden');$('advanced').classList.add('hidden');$('simpleMode').setAttribute('aria-pressed','true');$('advancedMode').setAttribute('aria-pressed','false');invalidate();};
+$('advancedMode').onclick=()=>{mode='advanced';$('advanced').classList.remove('hidden');$('simple').classList.add('hidden');$('simpleMode').setAttribute('aria-pressed','false');$('advancedMode').setAttribute('aria-pressed','true');invalidate();};
+$('addStep').onclick=()=>{addStep();invalidate();};
+$('pipelineName').addEventListener('input',invalidate);
+$('simple').addEventListener('change',invalidate);$('advanced').addEventListener('change',invalidate);$('advanced').addEventListener('input',invalidate);
+$('previewBtn').onclick=async()=>{
+ try{status('Previewing your changes…');const request=buildRequest();const data=await callApi('/api/datasets/'+datasetId+'/etl/preview',request);
+  preview={request,token:data.previewFingerprint};displayPreview(data);$('applyBtn').disabled=false;
+  status('Preview ready. Review the audit and row count, then approve to save a separate dataset.');
+ }catch(e){invalidate();status('Preview error: '+e.message,true);}
+};
+$('applyBtn').onclick=async()=>{
+ if(!preview)return;
+ $('applyBtn').disabled=true;
+ try{
+  status('Saving a new version. Original data is not changed…');
+  const data=await callApi('/api/datasets/'+datasetId+'/etl/apply',
+   {...preview.request,previewFingerprint:preview.token});
+  appliedId=data.id;$('savedCard').classList.remove('hidden');
+  $('savedInfo').textContent='Created dataset '+data.id+' · '+data.rowCount+' rows · '+data.quality.issues.length+' remaining issues.';
+  options($('metricColumn'));const amount=data.headers.find(h=>h.toLowerCase()==='amount');
+  if(amount)$('metricColumn').value=amount;
+  $('continueLink').href='/etl.html?dataset='+encodeURIComponent(data.id);
+  status('Saved successfully. Source preserved and transformation lineage attached.');
+ }catch(e){status('Save error: '+e.message,true);$('applyBtn').disabled=false;}
+};
+$('analyzeBtn').onclick=async()=>{
+ if(!appliedId)return;
+ try{const res=await fetch('/api/datasets/'+appliedId+'/metrics?column='+encodeURIComponent($('metricColumn').value));
+  const data=await res.json();if(!res.ok)throw new Error(data.error||'Analysis failed');
+  $('analyzeResult').textContent='Sum '+data.metric.sum+' · Average '+(data.metric.average??'n/a')+
+   ' · Included '+data.metric.includedRows+' rows, excluded '+data.metric.excludedRows+' rows.';
+ }catch(e){$('analyzeResult').textContent='Error: '+e.message;}
+};
+load();
+</script>
+</body></html>
