@@ -36,3 +36,33 @@ jobs:
         run: dotnet test tests/QueryForge.Api.Tests/QueryForge.Api.Tests.csproj --no-restore --configuration Release --no-build
       - name: Publish API
         run: dotnet publish src/QueryForge.Api/QueryForge.Api.csproj --no-restore -c Release -o ./publish
+
+  local-smoke-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start local API and PostgreSQL
+        run: docker compose up --build -d
+      - name: Verify API, upload, report, and metric
+        shell: bash
+        run: |
+          set -euo pipefail
+          for i in {1..35}; do
+            if curl -fsS http://127.0.0.1:5080/api/health > /tmp/health.json; then break; fi
+            sleep 3
+          done
+          jq -e '.status == "ok"' /tmp/health.json
+          curl -fsS -F "file=@src/QueryForge.Api/wwwroot/samples/orders.csv" \
+            http://127.0.0.1:5080/api/datasets > /tmp/upload.json
+          jq -e '.quality.rowCount == 7' /tmp/upload.json
+          jq -e '[.quality.issues[] | select(.code == "MIXED_CURRENCY")] | length == 2' /tmp/upload.json
+          ID=$(jq -r '.id' /tmp/upload.json)
+          curl -fsS "http://127.0.0.1:5080/api/datasets/$ID/metrics?column=amount" > /tmp/metric.json
+          jq -e '.metric.includedRows == 2 and .metric.excludedRows == 5 and .metric.sum == 350.5' /tmp/metric.json
+          echo "HTTP/database/upload/quality/metric smoke test passed"
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose logs --no-color
+      - name: Stop local containers
+        if: always()
+        run: docker compose down -v
