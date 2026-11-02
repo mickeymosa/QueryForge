@@ -114,7 +114,8 @@ public sealed class EtlPipeline
             }
             if (step.Operation is TransformOperation.FillMissing or TransformOperation.Replace or TransformOperation.RenameColumn or TransformOperation.AddColumn or TransformOperation.CopyColumn or TransformOperation.ReplaceText)
             {
-                if (step.To is null || step.To.Length > 200 || step.To.Length == 0)
+                if (step.To is null || step.To.Length > 200 ||
+                    (step.To.Length == 0 && step.Operation != TransformOperation.ReplaceText))
                     throw new EtlValidationException($"Step {index + 1}: a non-empty replacement or target is required (max 200 chars).");
             }
             if ((step.Operation is TransformOperation.Replace or TransformOperation.ReplaceText or TransformOperation.FilterEquals or TransformOperation.FilterContains or TransformOperation.FilterAmountAbove) &&
