@@ -100,7 +100,7 @@ public sealed class DeterministicDataInsightsService : IDataInsightsService
             if (name is "region" or "category" or "status" or "currency" or
                 "department" or "country" or "product") return 20;
             if (suggestion.Kind == ChartKind.Histogram &&
-                name is "amount" or "revenue" or "quantity" or "price") return 18;
+                (name is "amount" or "revenue" or "quantity" or "price")) return 18;
             if (name is "id" or "order_id" or "orderid" or "customer_id") return -10;
             return suggestion.Kind == ChartKind.Histogram ? 10 : 5;
         }
