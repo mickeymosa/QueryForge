@@ -4,6 +4,7 @@
 <meta name="theme-color" content="#121b4a">
 <title>QueryForge — Analytics Studio</title>
 <link rel="stylesheet" href="/assets/qf-modern.css">
+<link rel="stylesheet" href="/assets/qf-report-print.css" media="print">
 <style>
 .qf-ui .studio-grid{display:grid;grid-template-columns:minmax(0,1.8fr) minmax(240px,.8fr);gap:18px}
 .qf-ui .studio-toolbar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px;align-items:end}
@@ -79,6 +80,7 @@
    <div id="evidence" class="studio-evidence"></div>
    <p class="qf-note">All suggested ETL operations require your own preview and approval.</p>
    <button id="reportBtn" class="secondary" type="button" disabled>Download evidence report (.json)</button>
+   <button id="printBtn" class="secondary" type="button" disabled>Print / Save as PDF</button>
   </section>
  </aside>
 </section>
