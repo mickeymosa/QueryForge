@@ -61,7 +61,12 @@
 <div id="advanced" class="hidden">
   <p class="muted">Steps run from top to bottom. Type an exact column name when referring to a header renamed by an earlier step. Available operations are allowlisted: no custom scripts, hidden AI transforms or arbitrary SQL.</p>
   <datalist id="etlColumns"></datalist>
-  <div id="stepList"></div>
+  <div class="studio-pipeline-container" style="padding:16px 0">
+  <h3 style="margin:7px 0;font-size:1rem">Visual execution flow</h3>
+  <p class="qf-note">Click any step to jump to its settings. Steps execute left-to-right; up/down controls change their order. This is a linear pipeline, not a branching DAG.</p>
+  <div id="etlCanvas" role="group" aria-label="Current ETL execution flow" class="qf-etl-lane"></div>
+</div>
+<div id="stepList"></div>
   <button class="secondary" id="addStep" type="button">+ Add a transformation</button>
   <p class="detail">At most 12 operations per pipeline. Use the ↑ ↓ buttons to change execution order. Whole-cell Replace and substring ReplaceText are different operations.</p>
 </div>
@@ -240,4 +245,5 @@ $('analyzeBtn').onclick=async()=>{
 };
 load();
 </script>
+<script src="/assets/qf-etl-canvas.js" defer></script>
 </body></html>
