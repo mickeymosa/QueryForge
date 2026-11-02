@@ -128,6 +128,28 @@ jobs:
           curl -fsS http://127.0.0.1:5080/assets/qf-enhance.js > /tmp/qf-enhance.js
           grep -q 'dragover' /tmp/qf-enhance.js
           node --check /tmp/qf-enhance.js
+          echo "Checking Analytics Studio and evidence-based report endpoints"
+          curl -fsS "http://127.0.0.1:5080/api/datasets/$ID/insights" > /tmp/qf-insights.json
+          jq -e '.rowCount == 7 and (.suggestedCharts | length > 0)' /tmp/qf-insights.json
+          curl -fsS "http://127.0.0.1:5080/api/datasets/$ID/advisor/report" > /tmp/qf-report.json
+          jq -e '.aiEnabled == false and (.executiveSummary | contains("7 records"))' /tmp/qf-report.json
+          curl -fsS -H 'Content-Type: application/json' \
+            -d '{"kind":"CountByCategory","column":"currency","excludeFlaggedRows":false}' \
+            "http://127.0.0.1:5080/api/datasets/$ID/charts/preview" > /tmp/qf-chart.json
+          jq -e '.kind == "CountByCategory" and (.points | map(.value) | add) == 7' /tmp/qf-chart.json
+          MIXED_STATUS=$(curl -sS -o /tmp/mixed-chart-error.json -w '%{http_code}' \
+            -H 'Content-Type: application/json' \
+            -d '{"kind":"SumByCategory","column":"currency","measure":"amount","excludeFlaggedRows":false}' \
+            "http://127.0.0.1:5080/api/datasets/$ID/charts/preview")
+          test "$MIXED_STATUS" -eq 400
+          jq -e '.error | contains("mixed or missing currencies")' /tmp/mixed-chart-error.json
+          curl -fsS "http://127.0.0.1:5080/analytics.html?dataset=$ID" > /tmp/qf-analytics-ui.html
+          grep -q 'Analytics Studio' /tmp/qf-analytics-ui.html
+          curl -fsS http://127.0.0.1:5080/assets/qf-analytics.js > /tmp/qf-analytics.js
+          curl -fsS http://127.0.0.1:5080/assets/qf-etl-canvas.js > /tmp/qf-etl-canvas.js
+          node --check /tmp/qf-analytics.js
+          node --check /tmp/qf-etl-canvas.js
+          echo "Analytics insights/charts/report and JavaScript syntax smoke test passed"
           echo "HTTP/database/upload/ETL-preview/ETL-apply/provenance/metric smoke test passed"
       - name: Show logs on failure
         if: failure()
