@@ -104,6 +104,30 @@ jobs:
           LARGE_ID=$(jq -r '.id' /tmp/queryforge-large-result.json)
           curl -fsS "http://127.0.0.1:5080/api/datasets/$LARGE_ID/metrics?column=amount" > /tmp/queryforge-large-metrics.json
           jq -e '.metric.sum == 13000 and .metric.includedRows == 13000' /tmp/queryforge-large-metrics.json
+          echo "Checking oversize and excessive-row upload rejection"
+          python3 - <<'PY'
+          with open('/tmp/queryforge-too-large.csv','wb') as f:
+              f.write(b'order_id,amount\n')
+              f.write(b'X' * (26 * 1024 * 1024))
+          with open('/tmp/queryforge-too-many-rows.csv','w',encoding='utf-8') as f:
+              f.write('order_id,amount\n')
+              for i in range(30001):
+                  f.write(f'R{i},1\n')
+          PY
+          TOO_LARGE_STATUS=$(curl --max-time 180 -sS -o /tmp/oversize-response.txt \
+            -w '%{http_code}' -F 'file=@/tmp/queryforge-too-large.csv' \
+            http://127.0.0.1:5080/api/datasets)
+          test "$TOO_LARGE_STATUS" -ge 400
+          TOO_MANY_STATUS=$(curl --max-time 180 -sS -o /tmp/overrows-response.json \
+            -w '%{http_code}' -F 'file=@/tmp/queryforge-too-many-rows.csv' \
+            http://127.0.0.1:5080/api/datasets)
+          test "$TOO_MANY_STATUS" -eq 400
+          jq -e '.error | contains("30,000")' /tmp/overrows-response.json
+          curl -fsS http://127.0.0.1:5080/assets/qf-modern.css > /tmp/qf-modern.css
+          grep -q 'prefers-reduced-motion' /tmp/qf-modern.css
+          curl -fsS http://127.0.0.1:5080/assets/qf-enhance.js > /tmp/qf-enhance.js
+          grep -q 'dragover' /tmp/qf-enhance.js
+          node --check /tmp/qf-enhance.js
           echo "HTTP/database/upload/ETL-preview/ETL-apply/provenance/metric smoke test passed"
       - name: Show logs on failure
         if: failure()
