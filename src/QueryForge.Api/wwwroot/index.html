@@ -47,9 +47,9 @@
     <h1 id="uploadTitle">Your data deserves a second look.</h1>
     <p class="muted">Upload a CSV to find missing values, duplicate IDs and invalid amounts. Everything runs on your own local installation. No AI account is needed.</p>
     <form id="uploadForm">
-      <label for="file">Choose a CSV file (maximum 25 MiB, 30,000 rows)</label>
+      <label for="file">Choose a CSV file (maximum 2 MiB, 3,000 rows)</label>
       <input id="file" type="file" accept=".csv,text/csv" required aria-describedby="fileInfo" />
-      <p class="qf-file-info" id="fileInfo">Choose a file or drag it onto the upload area. Max 25 MiB / 30,000 rows / 80 columns.</p>
+      <p class="qf-file-info" id="fileInfo">Choose a file or drag it onto the upload area. Max 2 MiB / 3,000 rows / 40 columns.</p>
       <div style="margin-top:17px">
         <button id="uploadBtn" type="submit">Analyze my file</button>
         <button id="sampleBtn" class="secondary" type="button">Try an example</button>
@@ -57,6 +57,7 @@
     </form>
     <div class="qf-progress" id="qfUploadProgress" aria-hidden="true" hidden><span></span></div>
     <p id="status" class="status" role="status" aria-live="polite"></p>
+  <p class="qf-note">Need 2–25 MiB or more than 3,000 rows? <a href="/ingest.html">Use Safe Large Import</a> (streamed/paged preview; advanced ETL and charts for large datasets are being migrated).</p>
   </section>
 
   <section id="results" class="card hidden" aria-labelledby="qualityTitle">
