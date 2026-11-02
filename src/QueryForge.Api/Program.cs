@@ -6,6 +6,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddProblemDetails();
 builder.Services.AddSingleton<IQualityProfiler, DeterministicQualityProfiler>();
+builder.Services.AddSingleton<EtlPipeline>();
 builder.Services.AddScoped<IDatasetRepository, EfDatasetRepository>();
 builder.Services.AddScoped<CsvImportService>();
 builder.Services.AddDbContext<QueryForgeDb>(options =>
@@ -115,6 +116,9 @@ app.MapGet("/api/datasets/{id:guid}/metrics", async (
         return Results.BadRequest(new { error = "Numeric values exceed safe aggregation range." });
     }
 });
+
+// ETL is optional; users must preview an explicit, allowlisted transformation plan.
+app.MapEtlEndpoints();
 
 app.Run();
 
