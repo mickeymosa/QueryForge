@@ -1,0 +1,102 @@
+/* QueryForge v0.3 — responsive progressive enhancement.
+   Reuses the existing accessible HTML controls; no framework or CDN required. */
+:root {
+  --qf-ink:#17263d; --qf-slate:#546881; --qf-brand:#4357e8;
+  --qf-accent:#10b9af; --qf-stroke:#dde5f4; --qf-soft:#f7f9ff;
+  --qf-shadow:0 18px 55px rgba(42,59,99,.08);
+}
+html { scroll-behavior:smooth }
+body.qf-ui {
+  min-height:100vh; color:var(--qf-ink);
+  font-family:Inter,"Segoe UI",system-ui,sans-serif;
+  background:radial-gradient(ellipse 60% 45% at 4% 0%,rgba(86,111,255,.13),transparent),
+    radial-gradient(ellipse 50% 45% at 100% 35%,rgba(35,190,178,.10),transparent),
+    #f8faff;
+}
+.qf-ui header {
+  padding-top:26px; padding-bottom:26px;
+  background:linear-gradient(110deg,#111c48 3%,#202e70 60%,#193f70 100%);
+  box-shadow:0 12px 38px rgba(20,32,84,.12);
+  border-bottom:1px solid rgba(255,255,255,.1)
+}
+.qf-ui header strong {font-size:1.45rem;letter-spacing:-.045em}
+.qf-ui header p,.qf-ui header a {color:#d9e6ff}
+.qf-ui main {max-width:1050px}
+.qf-ui .card {
+  background:rgba(255,255,255,.98);border:1px solid var(--qf-stroke);
+  border-radius:20px;box-shadow:var(--qf-shadow);padding:28px;
+  transition:box-shadow .23s ease,border-color .23s ease,transform .23s ease;
+}
+.qf-ui .card:hover {box-shadow:0 20px 55px rgba(42,59,99,.11)}
+.qf-ui h1 {letter-spacing:-.055em;color:#142448;line-height:1.15;font-size:clamp(1.65rem,3vw,2.15rem)}
+.qf-ui h2 {letter-spacing:-.025em;color:#21375c}
+.qf-ui .muted {color:var(--qf-slate);max-width:750px}
+.qf-ui button, .qf-ui a.qf-button {
+  font-weight:650; border-radius:11px;letter-spacing:-.01em;
+  transition:transform .15s ease,box-shadow .15s ease,background .15s ease;
+  background:linear-gradient(135deg,#4357e8,#3543b6);
+  color:white;box-shadow:0 6px 17px rgba(64,79,220,.14);
+}
+.qf-ui button:hover:not(:disabled),.qf-ui a.qf-button:hover {
+  transform:translateY(-1px);box-shadow:0 9px 20px rgba(64,79,220,.2);
+}
+.qf-ui button:active:not(:disabled) {transform:translateY(0)}
+.qf-ui button.secondary {background:#edf1ff;color:#2c4588;box-shadow:none}
+.qf-ui button.secondary:hover:not(:disabled){background:#e5eafe}
+.qf-ui button:focus-visible,.qf-ui input:focus-visible,.qf-ui select:focus-visible,.qf-ui a:focus-visible {
+  outline:3px solid #ea9d41;outline-offset:3px;
+}
+.qf-ui .step,.qf-ui .step:not(.mode) {border:1px solid #dbe3f7;border-radius:14px}
+.qf-ui .steps .step {
+  background:#fff;box-shadow:0 4px 20px rgba(28,49,92,.04);font-weight:650;
+  transition:transform .2s ease,border-color .2s ease;
+}
+.qf-ui .steps .step:hover{transform:translateY(-2px);border-color:#aeb9fa}
+.qf-ui .steps .step span{background:#e7eaff;color:#4254cc;font-weight:700}
+.qf-ui .metric,.qf-ui .stats>div {
+  background:linear-gradient(155deg,#eef2ff,#f5fbff);
+  border:1px solid #e1e8fb;border-radius:13px;
+}
+.qf-ui .metric b,.qf-ui .stats b {color:#304bd1;letter-spacing:-.04em}
+.qf-ui input[type=file] {padding:22px;border:2px dashed #a9b6eb;background:#f7f9ff;cursor:pointer}
+.qf-ui input[type=file]:hover,.qf-ui input[type=file].dragging {border-color:#4254e0;background:#edf1ff}
+.qf-ui select,.qf-ui input[type=text]{min-height:44px;border:1px solid #cbd5ed;border-radius:10px}
+.qf-ui .mode button[aria-pressed=true] {background:linear-gradient(120deg,#4254dd,#3441a7);color:white}
+.qf-ui .mode button[aria-pressed=false] {background:#eef1ff;color:#28417b}
+.qf-ui .step {background:linear-gradient(160deg,#fff,#fafbff);box-shadow:none;position:relative}
+.qf-ui .stepHead {border-bottom:1px solid #e5e9f6;padding-bottom:10px}
+.qf-ui .message {border:1px solid #d9e6fd;border-radius:12px;background:#f0f5ff;color:#324577}
+.qf-ui .message.error {border-color:#f4b8b8;background:#fff2f1;color:#913939}
+.qf-ui .message.ok {border-color:#b8e5c8;background:#effaf3;color:#236a42}
+.qf-ui .scroll {border:1px solid #e2e8f4;border-radius:13px}
+.qf-ui th {background:#f3f6ff;color:#3a4b78;font-size:.82rem;position:sticky;top:0}
+.qf-ui tbody tr:hover {background:#f4f7ff}
+.qf-ui .issue{border-bottom:1px solid #e6ebf5}
+.qf-ui .qf-eyebrow {color:#4a59c5;letter-spacing:.09em;font-size:.7rem;text-transform:uppercase;font-weight:800}
+.qf-ui .qf-kicker {display:inline-flex;align-items:center;gap:8px;border-radius:100px;
+  padding:7px 13px;background:#eaf0ff;color:#4055b6;font-size:.79rem;font-weight:700;margin:0 0 13px}
+.qf-ui .qf-note {font-size:.82rem;margin:8px 0 0;color:#647390}
+.qf-ui .qf-progress {height:5px;min-height:5px;background:#e4eaff;border-radius:8px;overflow:hidden;margin:12px 0 0}
+.qf-ui .qf-progress span {height:100%;width:38%;display:block;border-radius:8px;
+ background:linear-gradient(90deg,#5c69ef,#19b8bd);animation:qf-progress 1.5s ease-in-out infinite alternate}
+.qf-ui .qf-progress[hidden]{display:none}
+@keyframes qf-progress{from{transform:translateX(-100%)}to{transform:translateX(300%)}}
+.qf-ui .qf-file-info{margin:9px 0 0;font-size:.83rem;color:#3d598b}
+.qf-ui .qf-workflow {display:flex;gap:9px;flex-wrap:wrap;margin:11px 0 16px}
+.qf-ui .qf-pill{padding:7px 12px;background:#eef1ff;border:1px solid #dce3fb;border-radius:100px;font-size:.81rem;color:#465787;font-weight:600}
+.qf-ui .qf-pill.active{background:#dfe7ff;border-color:#95a7fd;color:#2d41ad}
+.qf-ui .qf-step-btn{padding:7px 11px;min-height:34px;box-shadow:none}
+.qf-ui .qf-step-buttons{display:flex;gap:5px;flex-wrap:wrap}
+.qf-ui footer{padding-bottom:18px}
+@media(max-width:640px) {
+ .qf-ui main{padding:18px 12px}
+ .qf-ui .card{padding:18px;border-radius:14px}
+ .qf-ui header{padding:22px 16px}
+ .qf-ui .mode{flex-wrap:wrap}
+ .qf-ui button{max-width:100%}
+ .qf-ui .stepHead{align-items:flex-start;flex-wrap:wrap}
+}
+@media(prefers-reduced-motion:reduce){
+ html{scroll-behavior:auto}
+ .qf-ui *, .qf-ui *::before, .qf-ui *::after{animation:none!important;transition:none!important}
+}
