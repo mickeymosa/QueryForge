@@ -149,6 +149,12 @@ jobs:
           curl -fsS http://127.0.0.1:5080/assets/qf-etl-canvas.js > /tmp/qf-etl-canvas.js
           node --check /tmp/qf-analytics.js
           node --check /tmp/qf-etl-canvas.js
+          curl -fsS "http://127.0.0.1:5080/api/datasets/$ID/advisor/workflow" > /tmp/qf-workflow.json
+          jq -e '.usesExternalAi == false and .humanApprovalRequired == true' /tmp/qf-workflow.json
+          jq -e '(.readOnlyPreviews | length) >= 1' /tmp/qf-workflow.json
+          curl -fsS "http://127.0.0.1:5080/assets/qf-report-print.css" > /tmp/qf-print.css
+          grep -q '@media print' /tmp/qf-print.css
+          curl -fsS "http://127.0.0.1:5080/assets/qf-etl-canvas.css" > /tmp/qf-canvas.css
           echo "Analytics insights/charts/report and JavaScript syntax smoke test passed"
           echo "HTTP/database/upload/ETL-preview/ETL-apply/provenance/metric smoke test passed"
       - name: Show logs on failure
