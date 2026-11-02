@@ -49,7 +49,7 @@ Click **Preview changes** to show counts and a sample. Only **Approve & save new
 | `DropDuplicates` | Selected column | Retains first nonempty key, removes later duplicates (case-insensitive, trimmed key) |
 | `RenameColumn` | Selected column | Renames header if no case-insensitive collision |
 
-Rules execute top-to-bottom, max 12 steps. They are **not arbitrary user code**. No complex expression parser, arbitrary SQL, runtime plugin, or custom Python execution is accepted.
+Advanced Mode accepts an exact column name typed by the user, so a later step can reference a header created by an earlier RenameColumn step; all names are validated against the current step's schema by the backend. Rules execute top-to-bottom, max 12 steps. They are **not arbitrary user code**. No complex expression parser, arbitrary SQL, runtime plugin, or custom Python execution is accepted.
 
 ## REST contract
 
@@ -107,6 +107,8 @@ A successful apply creates a new dataset entry whose `quality.lineage` contains 
 **Preview first:** Users can see destructive operations' effects and reason about them. A preview fingerprint detects changes between preview and apply, but cannot replace authentication, authorization, CSRF protection, or audit user identity.
 
 **Deterministic operations:** Re-running the same recipe over identical rows yields the same derived data hash and rule hash (timestamps/IDs for saved runs may differ).
+
+**Source-row numbering limitation:** The demo importer numbers parsed data records as index + 2 (assuming a one-row header). For CSVs with multiline quoted fields or skipped blank lines, this is a logical record position, not a guaranteed physical file line number. Accurate parser offsets and source row IDs are a production improvement.
 
 ## Important limits and open engineering debts
 
