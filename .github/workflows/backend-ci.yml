@@ -1,0 +1,38 @@
+name: QueryForge backend build and tests
+
+on:
+  push:
+    branches:
+      - 'feat/backend-mvp-v0.1'
+    paths:
+      - 'src/QueryForge.Api/**'
+      - 'tests/QueryForge.Api.Tests/**'
+      - '.github/workflows/backend-ci.yml'
+      - 'docker-compose.yml'
+  pull_request:
+    paths:
+      - 'src/QueryForge.Api/**'
+      - 'tests/QueryForge.Api.Tests/**'
+      - '.github/workflows/backend-ci.yml'
+      - 'docker-compose.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore
+        run: dotnet restore tests/QueryForge.Api.Tests/QueryForge.Api.Tests.csproj
+      - name: Build
+        run: dotnet build tests/QueryForge.Api.Tests/QueryForge.Api.Tests.csproj --no-restore --configuration Release
+      - name: Run unit tests
+        run: dotnet test tests/QueryForge.Api.Tests/QueryForge.Api.Tests.csproj --no-restore --configuration Release --no-build
+      - name: Publish API
+        run: dotnet publish src/QueryForge.Api/QueryForge.Api.csproj --no-restore -c Release -o ./publish
