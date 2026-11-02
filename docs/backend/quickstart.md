@@ -9,7 +9,7 @@
 
 ## Start in one command
 
-From repository root, switch to `feat/backend-mvp-v0.1`, then:
+From repository root, switch to `feat/scale-ui-etl-v0.3`, then:
 
 ```sh
 docker compose up --build
@@ -17,7 +17,7 @@ docker compose up --build
 
 Open **http://127.0.0.1:5080/** and click **Try an example**.
 
-The browser can upload comma-separated UTF-8 CSV files up to 1 MiB, 3,000 records, 40 columns.
+The browser can upload comma-separated UTF-8 CSV files up to 25 MiB, 30,000 records, 80 columns.
 
 ## Commands
 
@@ -85,3 +85,29 @@ This branch adds a **Prepare and clean this dataset** link after upload. It open
 Details: [ETL engineering and study guide](../etl/etl-guide.md).
 
 **Scope:** This feature remains part of a draft parent backend, without production security, migrations, approved metric semantics or complete browser tests. Do not use confidential data.
+
+## v0.3 — practical local testing
+
+From the repository root:
+
+```powershell
+git fetch origin
+git switch feat/scale-ui-etl-v0.3
+git pull --ff-only
+docker compose up --build -d
+docker compose ps
+```
+
+Go to **http://127.0.0.1:5080/**. Try the sample and select **Prepare and clean this dataset** to enter Data Studio.
+
+- The server accepts up to **25 MiB**, with **30,000 data rows** and **80 columns**; request limits are enforced by both multipart parser and CSV importer.
+- The refreshed UI has a responsive design, upload file feedback and drag-drop selection.
+- Advanced Mode now exposes **15 allowlisted operations**, including `FilterEquals`, `FilterContains`, `FilterAmountAbove`, `AddColumn`, `CopyColumn`, `SortAscending`, and `ReplaceText`.
+- Each step has **↑ / ↓** controls to change execution order; preview and apply remain separate.
+- To verify local health: `Invoke-RestMethod http://127.0.0.1:5080/api/health`.
+- To inspect API errors: `docker compose logs --tail=100 api`.
+- To stop while retaining test data: `docker compose down`.
+
+This is **not an SSIS/SSAS replacement yet**. Larger datasets need streaming import, versioned storage, job orchestration and advanced typed expressions/joins; semantic analytics will be developed separately. See [product roadmap](../roadmap/ssis-ssas-parity.md).
+
+**Security warning:** No authentication or tenant isolation; local, synthetic data only. The branch and PR remain drafts until owner review.
