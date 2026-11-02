@@ -38,9 +38,9 @@ public sealed class AdvancedEtlOperationsTests
     public void FilterContains_KeepsPartialTextMatches()
     {
         var result = _pipeline.Execute(Source(), new("Names",
-            [new(TransformOperation.FilterContains,"name",From:"am")]));
-        Assert.Equal(2, result.Rows.Count); // Ahmed and Omar
-        Assert.Equal([2,5], result.OriginalRowNumbers);
+            [new(TransformOperation.FilterContains,"name",From:"ar")]));
+        Assert.Equal(2, result.Rows.Count); // Sara and Omar
+        Assert.Equal([3,5], result.OriginalRowNumbers);
     }
 
     [Fact]
