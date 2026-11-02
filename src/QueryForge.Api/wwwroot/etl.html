@@ -56,7 +56,8 @@
   </div>
 </div>
 <div id="advanced" class="hidden">
-  <p class="muted">Steps run from top to bottom. Available operations are allowlisted: no custom scripts, hidden AI transforms or arbitrary SQL.</p>
+  <p class="muted">Steps run from top to bottom. Type an exact column name when referring to a header renamed by an earlier step. Available operations are allowlisted: no custom scripts, hidden AI transforms or arbitrary SQL.</p>
+  <datalist id="etlColumns"></datalist>
   <div id="stepList"></div>
   <button class="secondary" id="addStep" type="button">+ Add a transformation</button>
   <p class="detail">At most 12 operations per pipeline. Replace matches whole cell values, not partial text.</p>
@@ -113,12 +114,13 @@ function addStep(){
  const remove=document.createElement('button');remove.type='button';remove.className='secondary';remove.textContent='Remove';
  remove.onclick=()=>{box.remove();invalidate();};head.append(title,remove);box.append(head);
  const grid=document.createElement('div');grid.className='layout';
- const op=control('select','Operation',operations),col=control('select','Column'),from=control('input','Original value (Replace)'),to=control('input','New value / column name');
- options(col.field,true);from.field.type=to.field.type='text';from.field.maxLength=to.field.maxLength=200;
+ const op=control('select','Operation',operations),col=control('input','Column name (exact)'),from=control('input','Original value (Replace)'),to=control('input','New value / column name');
+ col.field.type='text';col.field.setAttribute('list','etlColumns');col.field.placeholder='Blank means all columns for Trim';
+ from.field.type=to.field.type='text';from.field.maxLength=to.field.maxLength=200;
  op.field.value='Trim';op.field.addEventListener('change',()=>{refresh();invalidate();});
  const refresh=()=>{const o=op.field.value;const all=o==='Trim';const needFrom=o==='Replace';
  col.wrap.classList.toggle('hidden',false);
- if(!all&&col.field.value==='')col.field.selectedIndex=1;
+ if(!all&&col.field.value==='')col.field.value=(dataset?.headers||[])[0]||'';
  from.wrap.classList.toggle('hidden',!needFrom);
  to.wrap.classList.toggle('hidden',!['Replace','FillMissing','RenameColumn'].includes(o));};
  grid.append(op.wrap,col.wrap,from.wrap,to.wrap);box.append(grid);
@@ -156,7 +158,11 @@ async function load(){
   if(!res.ok)throw new Error('Dataset could not be loaded.');
   dataset=await res.json();
   $('source').textContent=dataset.fileName+' · '+dataset.rowCount+' rows · '+dataset.headers.length+' columns. ID: '+dataset.id;
-  options($('dedupeColumn'));options($('missingColumn'));addStep();
+  options($('dedupeColumn'));options($('missingColumn'));
+  const dl=$('etlColumns');dl.replaceChildren();dataset.headers.forEach(h=>{
+    const option=document.createElement('option');option.value=h;dl.append(option);
+  });
+  addStep();
   const id=dataset.headers.find(h=>['order_id','id'].includes(h.toLowerCase()));if(id)$('dedupeColumn').value=id;
   const key=dataset.headers.find(h=>h.toLowerCase()==='customer');if(key)$('missingColumn').value=key;
  }catch(e){$('source').textContent=e.message;$('previewBtn').disabled=true;}
