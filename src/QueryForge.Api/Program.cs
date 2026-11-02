@@ -11,6 +11,7 @@ builder.Services.Configure<FormOptions>(options =>
     options.MultipartBodyLengthLimit = CsvImportService.MaxUploadBytes);
 builder.Services.AddSingleton<IQualityProfiler, DeterministicQualityProfiler>();
 builder.Services.AddSingleton<EtlPipeline>();
+builder.Services.AddSingleton<IDataInsightsService, DeterministicDataInsightsService>();
 builder.Services.AddScoped<IDatasetRepository, EfDatasetRepository>();
 builder.Services.AddScoped<CsvImportService>();
 builder.Services.AddDbContext<QueryForgeDb>(options =>
@@ -123,6 +124,7 @@ app.MapGet("/api/datasets/{id:guid}/metrics", async (
 
 // ETL is optional; users must preview an explicit, allowlisted transformation plan.
 app.MapEtlEndpoints();
+app.MapAnalyticsEndpoints();
 
 app.Run();
 
