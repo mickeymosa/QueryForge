@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>QueryForge — Trust your data</title>
+  <style>
+    :root { color-scheme: light; font-family: Inter,system-ui,Segoe UI,Arial,sans-serif; background:#f4f7fa; color:#13273d; }
+    * { box-sizing:border-box } body { margin:0 } button,input { font:inherit }
+    header { background:#102b46; color:white; padding:25px max(20px,calc((100vw - 960px)/2)); }
+    header strong { font-size:1.3rem } header p { color:#c7dae9; margin:8px 0 0 }
+    main { max-width:960px; margin:34px auto; padding:0 20px }
+    .steps { display:flex; flex-wrap:wrap; gap:12px; margin:0 0 22px }
+    .step { background:white; border:1px solid #dce6ee; border-radius:12px; padding:12px 16px; font-weight:600; flex:1; min-width:180px }
+    .step span { display:inline-grid; place-items:center; width:25px; height:25px; border-radius:50%; background:#d9eff3; margin-right:8px }
+    .card { background:white; border:1px solid #d9e5ee; border-radius:17px; padding:24px; margin:18px 0; box-shadow:0 6px 23px #17324c0b }
+    h1 { margin:0 0 10px; font-size:1.65rem } h2 { margin:0 0 13px; font-size:1.1rem }
+    .muted { color:#576b7b; line-height:1.55 } label { display:block; font-weight:600; margin:14px 0 8px }
+    input[type=file] { width:100%; padding:17px; border:2px dashed #a8c7d5; border-radius:10px; background:#f8fbfd }
+    button { border:0; border-radius:10px; background:#086c86; color:white; padding:12px 18px; cursor:pointer; font-weight:650 }
+    button.secondary { background:#e9f2f5; color:#10576b; margin-left:8px }
+    button:disabled { opacity:.55; cursor:wait }
+    button:focus-visible,input:focus-visible { outline:3px solid #efb449; outline-offset:2px }
+    .metrics { display:grid; grid-template-columns:repeat(auto-fit,minmax(145px,1fr)); gap:10px }
+    .metric { border-radius:10px; background:#f1f7f9; padding:14px }
+    .metric b { font-size:1.65rem; display:block }
+    .issue { padding:10px 0; border-bottom:1px solid #edf1f5; line-height:1.5 }
+    .issue:last-child { border:0 } .error { color:#a93e3e } .warning { color:#885c13 }
+    .status { min-height:24px; font-size:.92rem; margin-top:12px } .hidden { display:none }
+    select { padding:11px; border:1px solid #b5c8d4; border-radius:9px; width:100%; margin:5px 0 12px }
+    table { width:100%; border-collapse:collapse; font-size:.88rem }
+    td,th { text-align:left; padding:9px; border-bottom:1px solid #dfe8ee; max-width:240px; overflow-wrap:anywhere }
+    .scroll { overflow:auto } small { color:#587188 } footer { margin:35px 0; text-align:center; color:#576b7b; font-size:.85rem }
+  </style>
+</head>
+<body>
+<header><strong>◇ QueryForge</strong><p>Know what's wrong with your data before trusting the numbers.</p></header>
+<main>
+  <div class="steps" aria-label="Three-step workflow">
+    <div class="step"><span>1</span>Upload a CSV</div>
+    <div class="step"><span>2</span>Review data quality</div>
+    <div class="step"><span>3</span>Explore safely</div>
+  </div>
+  <section class="card" aria-labelledby="uploadTitle">
+    <h1 id="uploadTitle">Start with your data</h1>
+    <p class="muted">Upload a CSV to find missing values, duplicate IDs and invalid amounts. Everything runs on your own local installation. No AI account is needed.</p>
+    <form id="uploadForm">
+      <label for="file">Choose a CSV file (maximum 1 MiB, 3,000 rows)</label>
+      <input id="file" type="file" accept=".csv,text/csv" required />
+      <div style="margin-top:17px">
+        <button id="uploadBtn" type="submit">Analyze my file</button>
+        <button id="sampleBtn" class="secondary" type="button">Try an example</button>
+      </div>
+    </form>
+    <p id="status" class="status" role="status" aria-live="polite"></p>
+  </section>
+
+  <section id="results" class="card hidden" aria-labelledby="qualityTitle">
+    <h2 id="qualityTitle">Data quality report</h2>
+    <div class="metrics" id="metrics"></div>
+    <p class="muted" id="provenance"></p>
+    <h2>What needs attention</h2>
+    <div id="issues"></div>
+    <h2 style="margin-top:22px">Preview</h2>
+    <div class="scroll" id="preview"></div>
+  </section>
+  <section id="analysis" class="card hidden" aria-labelledby="analysisTitle">
+    <h2 id="analysisTitle">Simple numeric analysis</h2>
+    <p class="muted">We exclude every row flagged by quality checks. The results show exactly which values were included.</p>
+    <label for="metricColumn">Column to summarize</label>
+    <select id="metricColumn"></select>
+    <button id="metricBtn" type="button">Calculate summary</button>
+    <p id="metricResult" role="status" aria-live="polite"></p>
+  </section>
+  <footer>Local prototype · No accounts, external AI, or cloud uploads · Do not use confidential data.</footer>
+</main>
+<script>
+  const el = id => document.getElementById(id);
+  let selectedDataset = null;
+  const setText = (id, value) => { el(id).textContent = value; };
+  function metric(label, value) {
+    const box = document.createElement('div');
+    box.className = 'metric';
+    const num = document.createElement('b'); num.textContent = String(value);
+    const caption = document.createElement('span'); caption.textContent = label;
+    box.append(num, caption); return box;
+  }
+  async function analyze(file) {
+    setText('status', 'Uploading and validating your file…');
+    el('uploadBtn').disabled = true;
+    try {
+      const form = new FormData(); form.append('file', file);
+      const response = await fetch('/api/datasets', { method:'POST', body:form });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || data.title || 'Upload failed');
+      selectedDataset = data;
+      const report = data.quality;
+      el('results').classList.remove('hidden');
+      el('analysis').classList.remove('hidden');
+      el('metrics').replaceChildren(
+        metric('Rows', report.rowCount),
+        metric('Columns', report.columnCount),
+        metric('Rows with warnings', report.rowsWithIssues),
+        metric('Issues detected', report.issues.length)
+      );
+      setText('provenance', 'Dataset ID: ' + data.id + ' · SHA-256: ' + data.sha256);
+      const issues = el('issues'); issues.replaceChildren();
+      if (report.issues.length === 0) {
+        const p=document.createElement('p'); p.textContent='No issues detected by the enabled rules.'; issues.append(p);
+      } else {
+        report.issues.slice(0, 30).forEach(issue => {
+          const div=document.createElement('div'); div.className='issue '+issue.severity;
+          div.textContent='Row '+issue.rowNumber+' · '+issue.column+' · '+issue.code+': '+issue.message;
+          issues.append(div);
+        });
+        if (report.issues.length > 30) {
+          const p=document.createElement('p');
+          p.textContent=(report.issues.length-30)+' additional issues not displayed here.';
+          issues.append(p);
+        }
+      }
+      const select=el('metricColumn'); select.replaceChildren();
+      data.headers.forEach(header => {
+        const option=document.createElement('option'); option.value=header; option.textContent=header;
+        select.append(option);
+      });
+      const preferred=data.headers.find(h=>h.toLowerCase()==='amount');
+      if (preferred) select.value=preferred;
+      const previewResponse=await fetch('/api/datasets/'+encodeURIComponent(data.id)+'/preview?limit=8');
+      if (!previewResponse.ok) throw new Error('Preview could not be loaded');
+      const preview=await previewResponse.json();
+      const table=document.createElement('table'), thead=document.createElement('thead');
+      const headerRow=document.createElement('tr');
+      preview.headers.forEach(h=>{const th=document.createElement('th');th.scope='col';th.textContent=h;headerRow.append(th);});
+      thead.append(headerRow); table.append(thead);
+      const tbody=document.createElement('tbody');
+      preview.rows.forEach(row=>{const tr=document.createElement('tr');preview.headers.forEach(h=>{const td=document.createElement('td');td.textContent=row[h]??'';tr.append(td);});tbody.append(tr);});
+      table.append(tbody);el('preview').replaceChildren(table);
+      setText('status','Import complete. Review the issues below.');
+    } catch (e) { setText('status','Error: '+e.message); }
+    finally { el('uploadBtn').disabled=false; }
+  }
+  el('uploadForm').addEventListener('submit', event => {
+    event.preventDefault(); const file=el('file').files[0]; if (file) analyze(file);
+  });
+  el('sampleBtn').addEventListener('click', async () => {
+    try { const response=await fetch('/samples/orders.csv');if(!response.ok)throw new Error('Sample unavailable');
+      const text=await response.text();await analyze(new File([text], 'sample-orders.csv',{type:'text/csv'}));
+    } catch(e) {setText('status','Error: '+e.message);}
+  });
+  el('metricBtn').addEventListener('click', async () => {
+    if (!selectedDataset) return;
+    setText('metricResult','Calculating…');
+    try { const response=await fetch('/api/datasets/'+selectedDataset.id+'/metrics?column='+encodeURIComponent(el('metricColumn').value));
+      const data=await response.json();if(!response.ok)throw new Error(data.error||'Calculation failed');
+      setText('metricResult','Sum: '+data.metric.sum+' · Average: '+(data.metric.average??'n/a')+
+        ' · Included rows: '+data.metric.includedRows+' · Excluded rows: '+data.metric.excludedRows);
+    } catch(e) {setText('metricResult','Error: '+e.message);}
+  });
+</script>
+</body>
+</html>

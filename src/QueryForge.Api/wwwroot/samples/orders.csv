@@ -1,0 +1,8 @@
+order_id,customer,amount,currency,paid
+ORD-001,Ahmed,150.50,EUR,true
+ORD-002,Sara,0,EUR,true
+ORD-003,Mona,80,GBP,true
+ORD-001,Ahmed,99,EUR,true
+ORD-004,Omar,30,USD,false
+ORD-005,Lina,200,EUR,true
+ORD-006,,45,EUR,true
