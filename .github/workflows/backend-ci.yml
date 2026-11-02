@@ -98,12 +98,19 @@ jobs:
                   out.write(f"R{i:05d},1,EUR," + "X" * 850 + "\n")
           PY
           test "$(stat -c %s /tmp/queryforge-over-10mb.csv)" -gt 10485760
+          LEGACY_STATUS=$(curl -sS -o /tmp/legacy-big-error.json -w '%{http_code}' \
+            -F "file=@/tmp/queryforge-over-10mb.csv" http://127.0.0.1:5080/api/datasets)
+          test "$LEGACY_STATUS" -eq 400
+          jq -e '.error | contains("2 MiB")' /tmp/legacy-big-error.json
           curl --max-time 180 -fsS -F "file=@/tmp/queryforge-over-10mb.csv" \
-            http://127.0.0.1:5080/api/datasets > /tmp/queryforge-large-result.json
-          jq -e '.rowCount == 13000 and .quality.rowsWithIssues == 0' /tmp/queryforge-large-result.json
+            http://127.0.0.1:5080/api/v2/datasets > /tmp/queryforge-large-result.json
+          jq -e '.rowCount == 13000 and .missingValues == 0 and .duplicateIds == 0' /tmp/queryforge-large-result.json
           LARGE_ID=$(jq -r '.id' /tmp/queryforge-large-result.json)
-          curl -fsS "http://127.0.0.1:5080/api/datasets/$LARGE_ID/metrics?column=amount" > /tmp/queryforge-large-metrics.json
-          jq -e '.metric.sum == 13000 and .metric.includedRows == 13000' /tmp/queryforge-large-metrics.json
+          curl -fsS "http://127.0.0.1:5080/api/v2/datasets/$LARGE_ID/rows?offset=12975&limit=25" > /tmp/queryforge-last-page.json
+          jq -e '.totalRows == 13000 and (.rows | length) == 25 and .hasMore == false' /tmp/queryforge-last-page.json
+          SQL_ROWS=$(docker compose exec -T database psql -U queryforge -d queryforge -Atc "SELECT COUNT(*) FROM stream_dataset_rows WHERE dataset_id = '$LARGE_ID';")
+          test "$SQL_ROWS" -eq 13000
+          echo "Relational storage: 13,000 individual rows, no giant dataset JSON blob"
           echo "Checking oversize and excessive-row upload rejection"
           python3 - <<'PY'
           with open('/tmp/queryforge-too-large.csv','wb') as f:
@@ -116,13 +123,18 @@ jobs:
           PY
           TOO_LARGE_STATUS=$(curl --max-time 180 -sS -o /tmp/oversize-response.txt \
             -w '%{http_code}' -F 'file=@/tmp/queryforge-too-large.csv' \
-            http://127.0.0.1:5080/api/datasets)
+            http://127.0.0.1:5080/api/v2/datasets)
           test "$TOO_LARGE_STATUS" -ge 400
           TOO_MANY_STATUS=$(curl --max-time 180 -sS -o /tmp/overrows-response.json \
             -w '%{http_code}' -F 'file=@/tmp/queryforge-too-many-rows.csv' \
-            http://127.0.0.1:5080/api/datasets)
+            http://127.0.0.1:5080/api/v2/datasets)
           test "$TOO_MANY_STATUS" -eq 400
           jq -e '.error | contains("30,000")' /tmp/overrows-response.json
+          # Transaction rollback: the invalid import must never leave a dataset or partial rows.
+          INVALID_DATASETS=$(docker compose exec -T database psql -U queryforge -d queryforge -Atc "SELECT COUNT(*) FROM stream_datasets;")
+          test "$INVALID_DATASETS" -eq 1
+          curl -fsS http://127.0.0.1:5080/ingest.html > /tmp/ingest.html
+          grep -q 'Safe Ingestion' /tmp/ingest.html
           curl -fsS http://127.0.0.1:5080/assets/qf-modern.css > /tmp/qf-modern.css
           grep -q 'prefers-reduced-motion' /tmp/qf-modern.css
           curl -fsS http://127.0.0.1:5080/assets/qf-enhance.js > /tmp/qf-enhance.js
