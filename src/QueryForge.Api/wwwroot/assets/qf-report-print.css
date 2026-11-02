@@ -1,0 +1,23 @@
+/* Print-ready evidence report: hide controls and maximize readable dataset-backed output. */
+@page { size:A4; margin:14mm 12mm }
+@media print {
+  html,body,body.qf-ui {background:#fff!important;color:#17243b!important}
+  header {background:#fff!important;color:#17243b!important;border-bottom:2px solid #4357e8!important;
+    box-shadow:none!important;padding:0 0 15px!important}
+  header p {color:#354d70!important}
+  .studio-toplinks,.studio-toolbar,.studio-tags,
+  #buildBtn,#exportChartBtn,#reportBtn,#printBtn,
+  #pageStatus,#chartStatus,label[for="chartKind"],label[for="column"],label[for="measure"],
+  label[for="topN"],label[for="excludeFlagged"] {display:none!important}
+  .studio-grid {display:block!important}
+  .card {box-shadow:none!important;border:1px solid #d9e2f5!important;break-inside:avoid;page-break-inside:avoid}
+  .kpi-grid {grid-template-columns:repeat(4,minmax(0,1fr))!important}
+  .studio-hero {padding:10px 0!important}
+  .studio-chart-scroll {overflow:visible!important;border:0!important}
+  #chartSvg {min-width:0!important;width:100%!important;max-height:380px}
+  .qf-ui .studio-summary {border:1px solid #dde6fa!important;color:#20314f!important}
+  a {color:#1c3b8f!important}
+  aside {break-before:page;page-break-before:always}
+  .studio-advice,.studio-evidence {break-inside:avoid}
+  button {display:none!important}
+}
