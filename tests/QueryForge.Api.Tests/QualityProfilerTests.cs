@@ -92,7 +92,7 @@ public sealed class QualityProfilerTests
         };
 
         var report = profiler.Analyze(headers, rows);
-        Assert.Single(report.Issues.Where(i => i.Code == "MIXED_CURRENCY"));
+        Assert.Single(report.Issues, i => i.Code == "MIXED_CURRENCY");
         Assert.Equal(3, report.Issues.Single(i => i.Code == "MIXED_CURRENCY").RowNumber);
         var metric = profiler.Summarize("amount", headers, rows, report);
         Assert.Equal(30m, metric.Sum);
