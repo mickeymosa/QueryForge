@@ -35,7 +35,7 @@ public sealed class CsvImportService(IQualityProfiler profiler, IDatasetReposito
         {
             HasHeaderRecord = true,
             IgnoreBlankLines = true,
-            TrimOptions = TrimOptions.Trim
+            TrimOptions = TrimOptions.None // Preserve source values; ETL trimming is explicit and previewed.
         });
         if (!await csv.ReadAsync())
             throw new InvalidDataException("CSV is empty.");
