@@ -14,8 +14,7 @@ public static class StreamDatasetEndpoints
             }
             catch (ResourceBusyException e)
             {
-                return Results.Json(new { error=e.Message },statusCode:429,
-                    headers:new Dictionary<string,string>{{"Retry-After","5"}});
+                return Results.Json(new { error=e.Message },statusCode:429);
             }
             catch (InvalidDataException e)
             {
