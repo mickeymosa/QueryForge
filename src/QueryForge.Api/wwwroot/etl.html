@@ -149,7 +149,7 @@ function addStep(){
  from.wrap.classList.toggle('hidden',!needFrom);
  to.wrap.classList.toggle('hidden',!needTo);};
  grid.append(op.wrap,col.wrap,from.wrap,to.wrap);box.append(grid);
- box._step=()=>({operation:op.field.value,column:col.field.value||null,from:from.field.value||null,to:to.field.value||null});
+ box._step=()=>({operation:op.field.value,column:col.field.value||null,from:from.field.value||null,to:to.field.value});
  $('stepList').append(box);refresh();renumberSteps();
 }
 function buildRequest(){
