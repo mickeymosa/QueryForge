@@ -90,13 +90,27 @@ public sealed class DeterministicDataInsightsService : IDataInsightsService
             else if (distinct is >= 1 and <= 30 && numeric < nonEmpty)
                 suggested.Add(new(ChartKind.CountByCategory, column, null,
                     "This column has a manageable number of distinct categories."));
-            if (suggested.Count >= 6) break;
+            // Do not cut off the search before reaching useful columns later in the CSV.
         }
+
+        // Present meaningful business dimensions first; identifiers are usually poor default charts.
+        static int Rank(ChartSuggestion suggestion)
+        {
+            string name = suggestion.Column.ToLowerInvariant();
+            if (name is "region" or "category" or "status" or "currency" or
+                "department" or "country" or "product") return 20;
+            if (suggestion.Kind == ChartKind.Histogram &&
+                name is "amount" or "revenue" or "quantity" or "price") return 18;
+            if (name is "id" or "order_id" or "orderid" or "customer_id") return -10;
+            return suggestion.Kind == ChartKind.Histogram ? 10 : 5;
+        }
+        var rankedCharts = suggested.OrderByDescending(Rank)
+            .ThenBy(x => x.Column, StringComparer.Ordinal).Take(6).ToList();
 
         var score = rows.Count == 0 ? 100m :
             Math.Round(100m * (rows.Count - report.RowsWithIssues) / rows.Count, 2);
         return new(source.Id, source.Sha256, rows.Count, report.RowsWithIssues,
-            score, issues, suggested,
+            score, issues, rankedCharts,
             [
                 "Quality score means the percentage of rows without any reported issue; it does not certify data correctness.",
                 "Chart previews exclude all flagged rows by default; users can explicitly include them.",
