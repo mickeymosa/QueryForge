@@ -183,6 +183,7 @@
     $('evidence').replaceChildren();
     report.evidence.forEach(line => $('evidence').append(element('p',line)));
     $('reportBtn').disabled = false;
+    $('printBtn').disabled = false;
   }
   async function load() {
     if (!dataSetId) { status('No dataset selected. Upload a CSV, then open Analytics Studio.',true);return; }
@@ -210,6 +211,7 @@
   $('exportChartBtn').addEventListener('click',()=>{
     if(latestChart) downloadJson('queryforge-chart-'+dataSetId+'.json',latestChart);
   });
+  $('printBtn').addEventListener('click',()=>window.print());
   $('reportBtn').addEventListener('click',()=>{
     if(advisory) downloadJson('queryforge-evidence-report-'+dataSetId+'.json',advisory);
   });
