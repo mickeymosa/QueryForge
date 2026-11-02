@@ -81,6 +81,32 @@ public sealed class QualityProfilerTests
     }
 
     [Fact]
+    public void MixedCurrencies_AreFlaggedWithoutAutomaticConversion()
+    {
+        string[] headers = ["order_id", "amount", "currency"];
+        var rows = new List<Dictionary<string, string>>
+        {
+            new() { ["order_id"] = "A1", ["amount"] = "20", ["currency"] = "EUR" },
+            new() { ["order_id"] = "A2", ["amount"] = "30", ["currency"] = "GBP" },
+            new() { ["order_id"] = "A3", ["amount"] = "10", ["currency"] = "eur" }
+        };
+
+        var report = profiler.Analyze(headers, rows);
+        Assert.Single(report.Issues.Where(i => i.Code == "MIXED_CURRENCY"));
+        Assert.Equal(3, report.Issues.Single(i => i.Code == "MIXED_CURRENCY").RowNumber);
+        var metric = profiler.Summarize("amount", headers, rows, report);
+        Assert.Equal(30m, metric.Sum);
+        Assert.Equal(2, metric.IncludedRows);
+    }
+
+    [Fact]
+    public void NoCurrencyColumn_DoesNotInventCurrencyIssues()
+    {
+        var report = profiler.Analyze(Headers, [Row("A1", "12"), Row("A2", "13")]);
+        Assert.DoesNotContain(report.Issues, issue => issue.Code == "MIXED_CURRENCY");
+    }
+
+    [Fact]
     public void UnknownMetricColumn_Throws()
     {
         var rows = new List<Dictionary<string, string>> { Row("A1", "10") };
