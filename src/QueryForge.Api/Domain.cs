@@ -102,6 +102,31 @@ public sealed class DeterministicQualityProfiler : IQualityProfiler
             }
         }
 
+        // Never silently aggregate different currencies as though they were identical.
+        // MVP policy: first non-empty code establishes the dataset baseline.
+        // Future releases will require explicit user-approved currency rules.
+        string? currencyColumn = headers.FirstOrDefault(h =>
+            h.Equals("currency", StringComparison.OrdinalIgnoreCase));
+        if (currencyColumn is not null)
+        {
+            var referenceCurrency = rows
+                .Select(r => r.GetValueOrDefault(currencyColumn, "").Trim())
+                .FirstOrDefault(value => value.Length > 0);
+            if (referenceCurrency is not null)
+            {
+                for (int i = 0; i < rows.Count; i++)
+                {
+                    string value = rows[i].GetValueOrDefault(currencyColumn, "").Trim();
+                    if (value.Length > 0 &&
+                        !value.Equals(referenceCurrency, StringComparison.OrdinalIgnoreCase))
+                    {
+                        issues.Add(new(i + 2, currencyColumn, "MIXED_CURRENCY", "error",
+                            $"Currency {value} differs from reference currency {referenceCurrency}; no conversion performed"));
+                    }
+                }
+            }
+        }
+
         return new(rows.Count, headers.Count,
             issues.Select(x => x.RowNumber).Distinct().Count(),
             profiles, issues);
