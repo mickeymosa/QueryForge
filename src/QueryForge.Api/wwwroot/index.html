@@ -64,6 +64,11 @@
     <h2 style="margin-top:22px">Preview</h2>
     <div class="scroll" id="preview"></div>
   </section>
+  <section id="etlIntro" class="card hidden">
+    <h2>Optional: Clean your data before analysis</h2>
+    <p class="muted">Want to remove extra spaces, fix values, or build your own transformations? Use Simple or Advanced mode. Preview first and keep the original file unchanged.</p>
+    <a id="etlLink" href="/etl.html" style="display:inline-block;background:#086c86;color:white;padding:12px 18px;border-radius:9px;text-decoration:none;font-weight:650">Prepare and clean this dataset</a>
+  </section>
   <section id="analysis" class="card hidden" aria-labelledby="analysisTitle">
     <h2 id="analysisTitle">Simple numeric analysis</h2>
     <p class="muted">We exclude every row flagged by quality checks. The results show exactly which values were included.</p>
@@ -94,6 +99,8 @@
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || data.title || 'Upload failed');
       selectedDataset = data;
+      el('etlIntro').classList.remove('hidden');
+      el('etlLink').href='/etl.html?dataset='+encodeURIComponent(data.id);
       const report = data.quality;
       el('results').classList.remove('hidden');
       el('analysis').classList.remove('hidden');

@@ -10,7 +10,12 @@ public sealed record QualityReport(
     int ColumnCount,
     int RowsWithIssues,
     IReadOnlyList<ColumnProfile> Columns,
-    IReadOnlyList<DataIssue> Issues);
+    IReadOnlyList<DataIssue> Issues)
+{
+    // Optional lineage is part of the stored quality report in v0.2.
+    // This avoids changing the demo DB schema; formal versioned tables are still needed.
+    public TransformationLineage? Lineage { get; init; }
+}
 public sealed record ParsedDataset(
     string FileName,
     string Sha256,

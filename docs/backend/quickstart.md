@@ -66,3 +66,22 @@ Before hosting publicly, implement authentication, authorization, CSRF controls 
 ## Verified CI evidence (2 Nov 2026)
 
 GitHub Actions [backend smoke test](https://github.com/mickeymosa/QueryForge/actions/runs/41493511767) passed: .NET build, 12 unit tests, Docker Compose startup, PostgreSQL health, sample upload, mixed-currency checks and an expected 350.50 sum (two valid EUR rows; five excluded rows). This does not replace browser usability, security, or production load tests.
+
+## v0.2 — Optional ETL before analysis (draft feature)
+
+This branch adds a **Prepare and clean this dataset** link after upload. It opens `/etl.html?dataset={id}` in the same local app.
+
+- **Simple Mode:** Trim surrounding spaces (on), optionally drop rows missing values or remove later duplicate IDs (both off by default).
+- **Advanced Mode:** Ordered Trim, Uppercase, Lowercase, Replace, FillMissing, DropMissing, DropDuplicates, RenameColumn. Choose exact columns; renamed columns can be referenced in later steps.
+- **Preview changes:** No database write. Displays row/issue counts, per-step effects, sample rows and a preview fingerprint.
+- **Approve & save:** Creates a new dataset, keeps original source unchanged, stores pipeline definition, parent dataset ID, checksum and source-record mapping in the quality report.
+
+`POST /api/datasets/{id}/etl/preview` with `{ "pipelineName":"Example", "steps":[{"operation":"Trim"}] }`
+
+`POST /api/datasets/{id}/etl/apply` with same JSON and `previewFingerprint` returned by preview.
+
+**Important:** v0.2 stops automatically trimming CSV values at import time, so ETL transformations are visible and explicit. The stored original data is the parsed CSV text (not necessarily an exact byte-by-byte round-trip of the original file); source file SHA-256 is preserved as metadata. The reported source-row reference is a logical parsed-record position, not necessarily a physical file line number for multiline fields or skipped blank lines.
+
+Details: [ETL engineering and study guide](../etl/etl-guide.md).
+
+**Scope:** This feature remains part of a draft parent backend, without production security, migrations, approved metric semantics or complete browser tests. Do not use confidential data.
