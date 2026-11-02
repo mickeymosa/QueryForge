@@ -3,13 +3,31 @@ using Microsoft.EntityFrameworkCore;
 using QueryForge.Api;
 using Microsoft.AspNetCore.Http.Features;
 using Npgsql;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddProblemDetails();
+// In-process admission control is a safety stopgap, not a distributed scheduler.
+builder.Services.AddRateLimiter(options =>
+{
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
+        RateLimitPartition.GetConcurrencyLimiter("local-api", _ => new ConcurrencyLimiterOptions
+        {
+            PermitLimit = 4,
+            QueueLimit = 0,
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst
+        }));
+    options.OnRejected = (context, _) =>
+    {
+        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        context.HttpContext.Response.Headers.RetryAfter = "5";
+        return ValueTask.CompletedTask;
+    };
+});
 // Form body is slightly larger than the file itself because multipart adds headers.
 builder.Services.Configure<FormOptions>(options =>
-    options.MultipartBodyLengthLimit = CsvImportService.MaxUploadBytes);
+    options.MultipartBodyLengthLimit = StreamDatasetService.MaxFileBytes);
 builder.Services.AddSingleton<IQualityProfiler, DeterministicQualityProfiler>();
 builder.Services.AddSingleton<EtlPipeline>();
 builder.Services.AddSingleton<IDataInsightsService, DeterministicDataInsightsService>();
@@ -28,12 +46,13 @@ builder.Services.AddDbContext<QueryForgeDb>(options =>
 
 // Reject large requests at the web-server boundary, before model binding.
 builder.WebHost.ConfigureKestrel(options =>
-    options.Limits.MaxRequestBodySize = CsvImportService.MaxUploadBytes + 2 * 1024 * 1024);
+    options.Limits.MaxRequestBodySize = StreamDatasetService.MaxFileBytes + 2 * 1024 * 1024);
 
 var app = builder.Build();
 app.UseExceptionHandler();
 app.UseDefaultFiles();
 app.UseStaticFiles();
+app.UseRateLimiter();
 
 // Demo-only bootstrap. Replace with EF Core migrations before a production release.
 using (var scope = app.Services.CreateScope())
