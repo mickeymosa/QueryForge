@@ -1,0 +1,34 @@
+name: Mentor C# reference checks
+
+on:
+  pull_request:
+    paths:
+      - 'src/QueryForge.**'
+      - 'tests/QueryForge.**'
+      - '.github/workflows/mentor-csharp.yml'
+  push:
+    branches:
+      - 'mentor/qf-004-reference'
+    paths:
+      - 'src/QueryForge.**'
+      - 'tests/QueryForge.**'
+      - '.github/workflows/mentor-csharp.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build C# sample
+        run: dotnet build src/QueryForge.Cli/QueryForge.Cli.csproj --configuration Release
+      - name: Run xUnit tests
+        run: dotnet test tests/QueryForge.Domain.Tests/QueryForge.Domain.Tests.csproj --configuration Release
+      - name: Run demo
+        run: dotnet run --project src/QueryForge.Cli/QueryForge.Cli.csproj --configuration Release --no-restore
