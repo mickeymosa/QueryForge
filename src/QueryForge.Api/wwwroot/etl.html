@@ -89,6 +89,7 @@
   <button id="analyzeBtn" type="button">Calculate</button>
   <p id="analyzeResult" role="status" aria-live="polite"></p>
   <a id="continueLink" href="#">Transform this version again</a>
+  <p><a id="analyticsLink" href="/analytics.html" class="qf-button" style="display:inline-block;padding:11px 16px;text-decoration:none;margin-top:10px">Visualize and report on this version</a></p>
 </section>
 </main>
 <script>
@@ -221,7 +222,7 @@ $('applyBtn').onclick=async()=>{
   status('Saving a new version. Original data is not changed…');
   const data=await callApi('/api/datasets/'+datasetId+'/etl/apply',
    {...preview.request,previewFingerprint:preview.token});
-  appliedId=data.id;$('savedCard').classList.remove('hidden');
+  appliedId=data.id;$('analyticsLink').href='/analytics.html?dataset='+encodeURIComponent(data.id);$('savedCard').classList.remove('hidden');
   $('savedInfo').textContent='Created dataset '+data.id+' · '+data.rowCount+' rows · '+data.quality.issues.length+' remaining issues.';
   options($('metricColumn'));const amount=data.headers.find(h=>h.toLowerCase()==='amount');
   if(amount)$('metricColumn').value=amount;
