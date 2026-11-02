@@ -90,6 +90,20 @@ jobs:
           jq -e '.metric.sum == 350.5 and .metric.includedRows == 2' /tmp/etl-metric.json
           curl -fsS "http://127.0.0.1:5080/etl.html?dataset=$DERIVED_ID" > /tmp/etl-ui.html
           grep -q 'Advanced mode' /tmp/etl-ui.html
+          echo "Verifying a >10 MiB CSV upload on the real ASP.NET API"
+          python3 - <<'PY'
+          with open("/tmp/queryforge-over-10mb.csv", "w", encoding="utf-8", newline="") as out:
+              out.write("order_id,amount,currency,notes\n")
+              for i in range(13000):
+                  out.write(f"R{i:05d},1,EUR," + "X" * 850 + "\n")
+          PY
+          test "$(stat -c %s /tmp/queryforge-over-10mb.csv)" -gt 10485760
+          curl --max-time 180 -fsS -F "file=@/tmp/queryforge-over-10mb.csv" \
+            http://127.0.0.1:5080/api/datasets > /tmp/queryforge-large-result.json
+          jq -e '.rowCount == 13000 and .quality.rowsWithIssues == 0' /tmp/queryforge-large-result.json
+          LARGE_ID=$(jq -r '.id' /tmp/queryforge-large-result.json)
+          curl -fsS "http://127.0.0.1:5080/api/datasets/$LARGE_ID/metrics?column=amount" > /tmp/queryforge-large-metrics.json
+          jq -e '.metric.sum == 13000 and .metric.includedRows == 13000' /tmp/queryforge-large-metrics.json
           echo "HTTP/database/upload/ETL-preview/ETL-apply/provenance/metric smoke test passed"
       - name: Show logs on failure
         if: failure()
