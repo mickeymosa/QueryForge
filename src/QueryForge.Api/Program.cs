@@ -2,6 +2,7 @@ using CsvHelper;
 using Microsoft.EntityFrameworkCore;
 using QueryForge.Api;
 using Microsoft.AspNetCore.Http.Features;
+using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,6 +16,11 @@ builder.Services.AddSingleton<IDataInsightsService, DeterministicDataInsightsSer
 builder.Services.AddSingleton<ReadOnlyEtlAdvisor>();
 builder.Services.AddScoped<IDatasetRepository, EfDatasetRepository>();
 builder.Services.AddScoped<CsvImportService>();
+// One pooled data source per API process; small bounded batches use short-lived connections.
+builder.Services.AddSingleton(NpgsqlDataSource.Create(
+    builder.Configuration.GetConnectionString("QueryForge")
+    ?? throw new InvalidOperationException("ConnectionStrings:QueryForge is required.")));
+builder.Services.AddSingleton<StreamDatasetService>();
 builder.Services.AddDbContext<QueryForgeDb>(options =>
     options.UseNpgsql(
         builder.Configuration.GetConnectionString("QueryForge")
@@ -34,6 +40,8 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<QueryForgeDb>();
     await db.Database.EnsureCreatedAsync();
+    await scope.ServiceProvider.GetRequiredService<StreamDatasetService>()
+        .EnsureSchemaAsync(CancellationToken.None);
 }
 
 app.MapGet("/api/health", async (QueryForgeDb db, CancellationToken token) =>
@@ -127,6 +135,7 @@ app.MapGet("/api/datasets/{id:guid}/metrics", async (
 app.MapEtlEndpoints();
 app.MapAnalyticsEndpoints();
 app.MapAdvisoryWorkflowEndpoints();
+app.MapStreamDatasetEndpoints();
 
 app.Run();
 
