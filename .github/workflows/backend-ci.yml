@@ -6,6 +6,7 @@ on:
       - 'feat/backend-mvp-v0.1'
     paths:
       - 'src/QueryForge.Api/**'
+      - 'src/QueryForge.PipelineCore/**'
       - 'tests/QueryForge.Api.Tests/**'
       - '.github/workflows/backend-ci.yml'
       - 'docker-compose.yml'
