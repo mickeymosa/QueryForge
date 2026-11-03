@@ -22,7 +22,7 @@ public sealed class DemoPipelineService
     public DemoPipelineService(IWebHostEnvironment environment)
     {
         string sample = Path.GetFullPath(Path.Combine(
-            environment.ContentRootPath, "wwwroot", "samples", "orders.csv"));
+            environment.ContentRootPath, "wwwroot", "samples", "pipeline_orders.csv"));
         approved = new Dictionary<string, PipelineSource>(StringComparer.Ordinal)
         {
             ["demo_orders"] = new(
