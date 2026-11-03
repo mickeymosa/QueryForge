@@ -39,6 +39,7 @@ builder.Services.AddSingleton(NpgsqlDataSource.Create(
     builder.Configuration.GetConnectionString("QueryForge")
     ?? throw new InvalidOperationException("ConnectionStrings:QueryForge is required.")));
 builder.Services.AddSingleton<StreamDatasetService>();
+builder.Services.AddSingleton<DemoPipelineService>();
 builder.Services.AddDbContext<QueryForgeDb>(options =>
     options.UseNpgsql(
         builder.Configuration.GetConnectionString("QueryForge")
@@ -155,6 +156,7 @@ app.MapEtlEndpoints();
 app.MapAnalyticsEndpoints();
 app.MapAdvisoryWorkflowEndpoints();
 app.MapStreamDatasetEndpoints();
+app.MapPipelineDemoEndpoints();
 
 app.Run();
 

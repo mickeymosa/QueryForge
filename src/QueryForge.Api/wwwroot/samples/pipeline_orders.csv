@@ -1,0 +1,6 @@
+order_id,customer,amount,currency,paid
+P-001,Ada,100.00,EUR,true
+P-002,Ben,50.00,USD,true
+P-003,Cy,200.00,EUR,false
+P-004,Dia,25.00,EUR,true
+P-005,Eli,0,GBP,true

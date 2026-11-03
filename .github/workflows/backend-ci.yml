@@ -6,6 +6,7 @@ on:
       - 'feat/backend-mvp-v0.1'
     paths:
       - 'src/QueryForge.Api/**'
+      - 'src/QueryForge.PipelineCore/**'
       - 'tests/QueryForge.Api.Tests/**'
       - '.github/workflows/backend-ci.yml'
       - 'docker-compose.yml'
@@ -168,6 +169,37 @@ jobs:
           grep -q '@media print' /tmp/qf-print.css
           curl -fsS "http://127.0.0.1:5080/assets/qf-etl-canvas.css" > /tmp/qf-canvas.css
           echo "Analytics insights/charts/report and JavaScript syntax smoke test passed"
+          echo 'Testing versioned pipeline compilation and DuckDB demo execution'
+          cat > /tmp/pipeline-demo.json <<'JSON'
+          {
+            "schemaVersion": 1,
+            "nodes": [
+              {"id":"total","kind":"Aggregate","aggregate":{"groupBy":"currency","function":"Sum","measure":"amount","outputColumn":"total"}},
+              {"id":"positive","kind":"Filter","filter":{"column":"amount","comparison":"GreaterThan","value":"0"}},
+              {"id":"source","kind":"Source","source":{"datasetKey":"demo_orders"}}
+            ],
+            "edges":[{"from":"positive","to":"total"},{"from":"source","to":"positive"}],
+            "outputNodeId":"total"
+          }
+          JSON
+          curl -fsS -H 'Content-Type: application/json' \
+            --data-binary @/tmp/pipeline-demo.json \
+            http://127.0.0.1:5080/api/pipelines/compile > /tmp/pipeline-compiled.json
+          jq -e '.orderedNodeIds == ["source","positive","total"] and .parameterCount == 1' /tmp/pipeline-compiled.json
+          curl -fsS -H 'Content-Type: application/json' \
+            --data-binary @/tmp/pipeline-demo.json \
+            http://127.0.0.1:5080/api/pipelines/demo/preview > /tmp/pipeline-preview.json
+          jq -e '.rowCountReturned == 2 and .sourceIsSynthetic == true' /tmp/pipeline-preview.json
+          jq -e '(.rows | map(select(.currency=="EUR") | .total) | add) == 325' /tmp/pipeline-preview.json
+          jq -e '(.rows | map(select(.currency=="USD") | .total) | add) == 50' /tmp/pipeline-preview.json
+          jq '.nodes |= map(if .kind == "Source" then .source.datasetKey="user_provided_path" else . end)' \
+            /tmp/pipeline-demo.json > /tmp/pipeline-rejected.json
+          BAD_SOURCE_STATUS=$(curl -sS -o /tmp/pipeline-rejected-response.json -w '%{http_code}' \
+            -H 'Content-Type: application/json' --data-binary @/tmp/pipeline-rejected.json \
+            http://127.0.0.1:5080/api/pipelines/demo/preview)
+          test "$BAD_SOURCE_STATUS" -eq 400
+          jq -e '.error | contains("not approved")' /tmp/pipeline-rejected-response.json
+          echo 'Typed DAG compiler and DuckDB deterministic demo checks passed'
           echo "HTTP/database/upload/ETL-preview/ETL-apply/provenance/metric smoke test passed"
       - name: Show logs on failure
         if: failure()
