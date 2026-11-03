@@ -1,51 +1,87 @@
 # QueryForge
 
-**Trustworthy, reproducible data analysis for small teams.**
+**A self-hostable, learning-led data quality and analytics platform.**
 
-> **Status: Planning / Sprint 0. No production-ready application exists yet.**
+> **Development status (November 2026): Local-only prototype. NOT production-ready.**
+> The full code is currently on stacked draft branches; `main` contains the initial planning material. This branch is **v0.6**, based on v0.5. Please do not upload confidential datasets or expose its ports to the Internet.
 
-QueryForge is an open-source, self-hostable platform planned to help people import CSV datasets, identify data-quality problems, explore safely, and obtain evidence-backed analyses. Optional AI will propose queries and explanations; deterministic validation, permission checks, and reproducible SQL remain the source of truth.
+## What exists on this development branch
 
-## Problem
+| Capability | Status |
+| --- | --- |
+| .NET 10 API, PostgreSQL, Docker Compose | Local prototype |
+| CSV quality checks and controlled ETL/visualization | Legacy small-data path (2 MiB, 3,000 rows) |
+| Incremental CSV ingest with paged DB row reads | Separate v2 route (25 MiB, 30,000 rows); **large-data ETL is NOT connected** |
+| Typed DAG compiler (Source/Filter/Select/Aggregate) | Implemented with Kahn sorting, schema/type checks and SQL parameters |
+| DuckDB analytics execution | **Only** the shipped synthetic `demo_orders` file; restricted preview, max 100 result rows |
+| Easy/Advanced React workspace, real-world Parquet execution, visual branching DAG | Not implemented |
+| AI agent/LLM, user accounts, multi-tenant permission boundary | Not implemented |
 
-A polished chart can still be wrong when its source data contains duplicates, missing records, inconsistent currencies, or undocumented transformations. QueryForge aims to make data quality and traceability visible before users trust an answer.
+**Do not confuse the typed DAG compiler with a full SSIS/Power BI replacement.** The analytical foundation has intentionally narrow scope so it can be reviewed and tested.
 
-## Planned MVP
+## Run locally
 
-1. Upload a bounded CSV file to an isolated workspace.
-2. Profile schema, missing values, duplicates and invalid records.
-3. Review and apply versioned validation rules.
-4. Execute constrained, read-only SQL queries with visible provenance.
-5. View tables/charts and export a report with source details.
-6. Optionally request a natural-language explanation with the supporting SQL displayed.
+Requires Docker Desktop. Run from the cloned repository root:
 
-AI is **optional**. The core must work without an API key or cloud subscription.
+```powershell
+git fetch origin
+git switch --track origin/feat/typed-dag-duckdb-foundation-v0.6
+docker compose up --build -d
+docker compose ps
+```
 
-## Proposed stack
+Visit:
+- `http://127.0.0.1:5080`: legacy small-data ETL and analytics screens.
+- `http://127.0.0.1:5080/ingest.html`: separate streaming import and paged preview.
 
-- **C# / ASP.NET Core (.NET 10):** primary API, domain modelling, authorization and orchestration.
-- **PostgreSQL + EF Core / Npgsql:** application metadata, workspaces, structured analysis data.
-- **Python:** testable CSV ingestion and data-quality processing, added after .NET groundwork.
-- **React + TypeScript:** accessible dataset management and visualization UI.
-- **xUnit / pytest / Vitest / Playwright:** tests at different boundaries.
-- **Docker Compose + GitHub Actions:** repeatable local setup and CI, implemented in later sprints.
+### Run the new typed pipeline demo
 
-The above is an architectural *proposal*; tool choices can change through documented architecture decisions.
+The only available pipeline source is a **synthetic, server-approved sample**. Its data includes EUR and USD records, so aggregations are explicitly grouped by currency.
 
-## Current contents
+```powershell
+Invoke-RestMethod -Uri http://127.0.0.1:5080/api/pipelines/compile `
+  -Method Post -ContentType 'application/json' -InFile examples/typed-pipeline-demo.json
 
-- [Product charter](docs/product/charter.md)
-- [MVP requirements](docs/product/mvp-requirements.md)
-- [Roadmap and epics](docs/planning/roadmap.md)
-- [Sprint 0](docs/planning/sprint-0.md)
-- [Architecture decision 0001](docs/architecture/adr-0001-architecture.md)
-- [Skill evidence matrix](docs/learning/skill-evidence-matrix.md)
-- [Engineering and mentorship agreement](docs/learning/engineering-playbook.md)
+Invoke-RestMethod -Uri http://127.0.0.1:5080/api/pipelines/demo/preview `
+  -Method Post -ContentType 'application/json' -InFile examples/typed-pipeline-demo.json
+```
 
-## Getting involved
+Expected synthetic aggregation after the positive-amount filter: `EUR=325`, `USD=50`. Run the unit tests using the .NET 10 SDK:
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md). This is a learning-led early project; please do not use it with real confidential or production data.
+```powershell
+dotnet test tests/QueryForge.Api.Tests/QueryForge.Api.Tests.csproj
+```
 
-## License
+Stop without deleting your PostgreSQL data:
 
-MIT; see [LICENSE](LICENSE). The maintainer can review licensing before the first public release.
+```powershell
+docker compose down
+```
+
+**Never run `docker compose down -v` unless you intentionally want to erase local database volumes.**
+
+## Why the architecture is changing
+
+The initial implementation relied on `List<Dictionary<string,string>>` and a serialized JSON dataset value. That approach was simple for early learning but creates memory amplification and poorly scalable analytical access. v0.5 introduced a separate incremental importer and individual PostgreSQL row storage. v0.6 introduces the shared typed DAG compiler and restricted DuckDB execution demo.
+
+We are evaluating **PostgreSQL for metadata + Parquet/DuckDB for analytical data**. This is an architecture direction, **not yet implemented for uploaded user datasets**. Arrow is optional interchange, not a requirement for every module.
+
+- [ADR-0002: Resource safety and streaming storage](docs/engineering/adr-0002-resource-safety-streaming.md)
+- [ADR-0003: Typed DAG compiler and DuckDB](docs/architecture/adr-0003-typed-pipeline-duckdb.md)
+- [Example pipeline JSON](examples/typed-pipeline-demo.json)
+- [Draft PR for v0.6](https://github.com/mickeymosa/QueryForge/pull/28)
+- [GitHub Actions evidence](https://github.com/mickeymosa/QueryForge/actions/runs/41695265772)
+
+## Security and release readiness
+
+This branch has **no authentication, tenant isolation, durable job orchestration or verified concurrent production workload**. DuckDB's internal memory setting does not impose a hard operating-system RSS limit; the in-process runner is deliberately restricted to synthetic data. A production worker with OS resource limits, versioned storage, ownership and permissions, migrations and load tests is still required.
+
+AI is not connected to the DAG engine. A later AI planner may propose typed, validated plans; it will not get unrestricted SQL, Python or C# execution.
+
+No pull request is auto-approved or auto-merged. A maintainer must review the code, test results, data semantics and remaining risks before promotion.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md), and the [engineering playbook](docs/learning/engineering-playbook.md).
+
+**License:** MIT. This is an early open-source learning project, not a production data platform.
