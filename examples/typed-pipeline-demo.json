@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "nodes": [
+    {
+      "id": "source",
+      "kind": "Source",
+      "source": { "datasetKey": "demo_orders" }
+    },
+    {
+      "id": "positive",
+      "kind": "Filter",
+      "filter": {
+        "column": "amount",
+        "comparison": "GreaterThan",
+        "value": "0"
+      }
+    },
+    {
+      "id": "totals",
+      "kind": "Aggregate",
+      "aggregate": {
+        "groupBy": "currency",
+        "function": "Sum",
+        "measure": "amount",
+        "outputColumn": "total"
+      }
+    }
+  ],
+  "edges": [
+    { "from": "source", "to": "positive" },
+    { "from": "positive", "to": "totals" }
+  ],
+  "outputNodeId": "totals"
+}
