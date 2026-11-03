@@ -209,6 +209,13 @@ public sealed class PipelineCompiler
                             var measure = Find(columns, settings.Measure, id);
                             if (measure.Type != PipelineValueType.Decimal)
                                 throw new PipelineValidationException($"Node {id}: SUM requires a numeric measure.");
+                            // Conservative demo policy: never aggregate amounts across currencies
+                            // when the input schema includes a currency field.
+                            if (measure.Name.Equals("amount", StringComparison.OrdinalIgnoreCase) &&
+                                columns.Any(c => c.Name.Equals("currency", StringComparison.OrdinalIgnoreCase)) &&
+                                !group.Name.Equals("currency", StringComparison.OrdinalIgnoreCase))
+                                throw new PipelineValidationException(
+                                    $"Node {id}: amounts must be grouped by currency to avoid mixed-unit totals.");
                             expr = $"SUM({Ident(measure.Name)})";
                         }
                         else
