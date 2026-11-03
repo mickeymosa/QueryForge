@@ -1,7 +1,9 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /source
+COPY src/QueryForge.PipelineCore/QueryForge.PipelineCore.csproj src/QueryForge.PipelineCore/
 COPY src/QueryForge.Api/QueryForge.Api.csproj src/QueryForge.Api/
 RUN dotnet restore src/QueryForge.Api/QueryForge.Api.csproj
+COPY src/QueryForge.PipelineCore/ src/QueryForge.PipelineCore/
 COPY src/QueryForge.Api/ src/QueryForge.Api/
 RUN dotnet publish src/QueryForge.Api/QueryForge.Api.csproj -c Release -o /out --no-restore
 
