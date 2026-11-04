@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using QueryForge.Api;
 using Xunit;
@@ -47,12 +48,12 @@ public sealed class PivotServiceTests
         var result=service.Build(Source(),new("region","product",PivotAggregate.Sum,"amount"));
         Assert.Equal(["Hardware","Software"],result.ColumnLabels);
         Assert.Equal(["EU","US"],result.Rows.Select(r=>r.Label));
-        Assert.Equal([10m,35m],result.Rows[0].Values);
-        Assert.Equal([70m,50m],result.Rows[1].Values);
-        Assert.Equal(45m,result.Rows[0].Total);
-        Assert.Equal(120m,result.Rows[1].Total);
-        Assert.Equal([80m,85m],result.ColumnTotals);
-        Assert.Equal(165m,result.GrandTotal);
+        Assert.Equal(["10","35"],result.Rows[0].Values);
+        Assert.Equal(["70","50"],result.Rows[1].Values);
+        Assert.Equal("45",result.Rows[0].Total);
+        Assert.Equal("120",result.Rows[1].Total);
+        Assert.Equal(["80","85"],result.ColumnTotals);
+        Assert.Equal("165",result.GrandTotal);
         Assert.Equal("EUR",result.Unit);
         Assert.Equal(6,result.IncludedRows);
         Assert.Equal(1,result.ExcludedRows);
@@ -64,13 +65,13 @@ public sealed class PivotServiceTests
     public void AverageTotals_AreWeightedAndNotMeansOfMeans()
     {
         var result=service.Build(Source(),new("region","product",PivotAggregate.Average,"amount"));
-        Assert.Equal(17.5m,result.Rows[0].Values[1]);
-        Assert.Equal(35m,result.Rows[1].Values[0]);
-        Assert.Equal(15m,result.Rows[0].Total);
-        Assert.Equal(40m,result.Rows[1].Total);
-        Assert.Equal(27.5m,result.GrandTotal);
-        Assert.Equal(80m/3m,result.ColumnTotals[0]);
-        Assert.Equal(85m/3m,result.ColumnTotals[1]);
+        Assert.Equal("17.5",result.Rows[0].Values[1]);
+        Assert.Equal("35",result.Rows[1].Values[0]);
+        Assert.Equal("15",result.Rows[0].Total);
+        Assert.Equal("40",result.Rows[1].Total);
+        Assert.Equal("27.5",result.GrandTotal);
+        Assert.Equal((80m/3m).ToString(CultureInfo.InvariantCulture),result.ColumnTotals[0]);
+        Assert.Equal((85m/3m).ToString(CultureInfo.InvariantCulture),result.ColumnTotals[1]);
     }
 
     [Fact]
@@ -78,11 +79,11 @@ public sealed class PivotServiceTests
     {
         var one=service.Build(Source(),new("region",null,PivotAggregate.Count));
         Assert.Equal(["All records"],one.ColumnLabels);
-        Assert.Equal([3m,3m],one.Rows.Select(r=>r.Total));
-        Assert.Equal(6m,one.GrandTotal);
+        Assert.Equal(["3","3"],one.Rows.Select(r=>r.Total));
+        Assert.Equal("6",one.GrandTotal);
 
         var two=service.Build(Source(),new("product","region",PivotAggregate.Count));
-        Assert.Equal(6m,two.GrandTotal);
+        Assert.Equal("6",two.GrandTotal);
     }
 
     [Fact]
@@ -92,9 +93,9 @@ public sealed class PivotServiceTests
             new("product","region",PivotAggregate.Count,ExcludeFlaggedRows:false));
         Assert.Equal(7,result.IncludedRows);
         Assert.Equal(0,result.ExcludedRows);
-        Assert.Equal(7m,result.GrandTotal);
-        Assert.Equal(4m,result.ColumnTotals[0]);
-        Assert.Equal(3m,result.ColumnTotals[1]);
+        Assert.Equal("7",result.GrandTotal);
+        Assert.Equal("4",result.ColumnTotals[0]);
+        Assert.Equal("3",result.ColumnTotals[1]);
     }
 
     [Fact]
@@ -102,7 +103,7 @@ public sealed class PivotServiceTests
     {
         var result=service.Build(Source(),
             new("region","product",PivotAggregate.Sum,"amount",ExcludeFlaggedRows:false));
-        Assert.Equal(165m,result.GrandTotal);
+        Assert.Equal("165",result.GrandTotal);
         Assert.Equal(7,result.IncludedRows);
         Assert.Equal(1,result.InvalidNumericRows);
         Assert.Equal(0,result.ExcludedRows);
@@ -120,7 +121,7 @@ public sealed class PivotServiceTests
             new("region","product",PivotAggregate.Sum,"amount",ExcludeFlaggedRows:false)));
         Assert.Throws<PivotValidationException>(()=>service.Build(source,
             new("region",null,PivotAggregate.Average,"amount",ExcludeFlaggedRows:false)));
-        Assert.Equal(7m,service.Build(source,
+        Assert.Equal("7",service.Build(source,
             new("region",null,PivotAggregate.Count,ExcludeFlaggedRows:false)).GrandTotal);
     }
 
@@ -147,7 +148,7 @@ public sealed class PivotServiceTests
         var result=service.Build(source,
             new("region","product",PivotAggregate.Count,ExcludeFlaggedRows:false));
         Assert.Contains(result.Rows,r=>r.Label=="(missing)");
-        Assert.Equal(7m,result.GrandTotal);
+        Assert.Equal("7",result.GrandTotal);
     }
 
     [Fact]
@@ -192,7 +193,7 @@ public sealed class PivotServiceTests
         source.ReportJson=JsonSerializer.Serialize(profiler.Analyze(source.Headers,[]));
         var result=service.Build(source,new("region",null,PivotAggregate.Count));
         Assert.Empty(result.Rows);
-        Assert.Equal(0m,result.GrandTotal);
+        Assert.Equal("0",result.GrandTotal);
         Assert.Equal(0,result.IncludedRows);
 
         var numeric=service.Build(source,new("region",null,PivotAggregate.Average,"amount"));
