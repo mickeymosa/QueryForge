@@ -479,6 +479,14 @@
         const blob=await response.blob();await importFile(new File([blob],'orders.csv',{type:'text/csv'}));
       }catch(e){notice(e.message,true);}
     });
+    $('pivotSampleBtn').addEventListener('click',async()=>{
+      try{
+        const response=await fetch('/samples/pivot-sales.csv');
+        if(!response.ok)throw new Error('Pivot demo file unavailable.');
+        const blob=await response.blob();
+        await importFile(new File([blob],'pivot-sales.csv',{type:'text/csv'}));
+      }catch(e){notice(e.message,true);}
+    });
     $('toPrepare').addEventListener('click',()=>go('prepare'));
     $('operationSearch').addEventListener('input',renderPalette);
     $('pipelineCanvas').addEventListener('dragover',e=>{if(state.mode==='advanced')e.preventDefault();});
