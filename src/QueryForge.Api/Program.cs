@@ -35,6 +35,7 @@ builder.Services.AddSingleton<ReadOnlyEtlAdvisor>();
 builder.Services.AddScoped<IDatasetRepository, EfDatasetRepository>();
 builder.Services.AddScoped<CsvImportService>();
 builder.Services.AddScoped<StudioImportService>();
+builder.Services.AddHttpClient<StudioAiPlanner>(client => client.Timeout = TimeSpan.FromSeconds(45));
 // One pooled data source per API process; small bounded batches use short-lived connections.
 builder.Services.AddSingleton(NpgsqlDataSource.Create(
     builder.Configuration.GetConnectionString("QueryForge")
@@ -159,6 +160,7 @@ app.MapAdvisoryWorkflowEndpoints();
 app.MapStreamDatasetEndpoints();
 app.MapPipelineDemoEndpoints();
 app.MapStudioImportEndpoints();
+app.MapStudioAiEndpoints();
 
 app.Run();
 
