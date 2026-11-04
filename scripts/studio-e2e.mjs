@@ -122,6 +122,32 @@ try{
     document.getElementById('dataHeading')?.textContent?.includes('queryforge-studio-test'));
   assert.match(await page.locator('#dataDescription').innerText(),/2 rows/);
   console.log('Browser XLSX import and quality preview passed');
+
+  // A purpose-made sales fixture proves 2D monetary pivot accuracy and linked charts.
+  await page.locator('#pivotSampleBtn').click();
+  await page.waitForFunction(()=>
+    document.getElementById('dataHeading')?.textContent==='pivot-sales.csv');
+  await page.locator('[data-view="visualize"]').click();
+  await page.locator('#pivotRows').selectOption('city');
+  await page.locator('#pivotColumns').selectOption('category');
+  await page.locator('#pivotAggregate').selectOption('Sum');
+  await page.locator('#pivotMeasure').selectOption('amount');
+  const salesResponse=page.waitForResponse(r=>
+    r.url().includes('/pivot/preview') && r.request().method()==='POST');
+  await page.locator('#buildPivot').click();
+  const salesHttp=await salesResponse;
+  assert.equal(salesHttp.status(),200);
+  const sales=await salesHttp.json();
+  assert.equal(sales.grandTotal,'605');
+  assert.equal(sales.unit,'EUR');
+  assert.deepEqual(sales.columnLabels,['Hardware','Software']);
+  assert.deepEqual(sales.rows.map(r=>r.label),['Al Wakrah','Doha','Lusail']);
+  assert.deepEqual(sales.rows.find(r=>r.label==='Doha').values,['150','80']);
+  assert.equal(sales.rows.find(r=>r.label==='Lusail').total,'275');
+  assert.equal(await page.locator('#pivotTable tfoot td').last().innerText(),'605');
+  await page.screenshot({path:'artifacts/studio-pivot-sales.png',fullPage:true});
+  console.log('Browser sales pivot: Doha 230, Lusail 275, Al Wakrah 100, total EUR 605');
+
   assert.deepEqual(errors,[],'Uncaught browser JS exceptions');
   console.log('All QueryForge Studio headless browser checks passed');
 }finally{
