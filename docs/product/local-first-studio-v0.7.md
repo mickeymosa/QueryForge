@@ -97,3 +97,17 @@ Run CI:
 > Built a local-first .NET 10 data-preparation and analytics prototype with CSV/XLSX import, real preview-and-approve ETL workflows, a drag-reorder visual editor, backend-calculated charts and an optional self-hosted LLM planner constrained by typed validation.
 
 **Do not say:** production-ready Power BI clone, 500MB ETL, React Flow/DAG visual joins, fully autonomous AI or enterprise multi-tenancy.
+
+## Verified integration evidence (2026-11-04)
+
+**Passing GitHub Actions run:** https://github.com/mickeymosa/QueryForge/actions/runs/41874460026
+
+- **66/66 xUnit tests** passed, zero failures, zero skipped.
+- **Docker smoke checks** passed: original CSV ETL/lineage/analytics, 13,000-row v2 PostgreSQL streaming import, rejected invalid imports, v0.6 DuckDB synthetic source/aggregation, and new Studio CSV/XLSX imports.
+- **Headless Chrome E2E** passed (via `scripts/studio-e2e.mjs`): sample CSV import and quality overview → Easy Mode guided command → switch to Advanced Mode → native drag-and-drop new operation + reorder → deterministic ETL preview/fingerprint apply into derived dataset → backend chart + result table → mobile viewport test (390 px, no horizontal page scrolling) → actual XLSX import.
+- **Screenshots recorded** for import, visual ETL, ETL preview, charting, and 390px mobile. They are attached to that GitHub Actions run as `queryforge-studio-e2e` (7-day artifact retention).
+- **Regression caught and corrected:** ExcelDataReader's Windows-1252 code page on .NET Linux; fixed by registering `CodePagesEncodingProvider`. Headless mobile tests identified and corrected a chart-table/sidebar overflow.
+- Browser tests run against Docker on an Ubuntu GitHub runner using headless Chrome. **This is not yet a direct Windows manual visual-acceptance signoff.** User must also test their local Docker Desktop/browser configuration.
+- No automated test in this run exercises a downloaded Ollama language model; the AI-disabled endpoint behavior is tested, but live model-plan quality and local host connectivity remain a manual validation gate.
+
+**CI gate:** PR #29 remains DRAFT and unmerged. The screenshots and results demonstrate the MVP workflow, not performance claims, public-hosting safety, or full Power BI pivots.
