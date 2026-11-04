@@ -27,6 +27,13 @@ public sealed class StudioAiPlanner(HttpClient client, IConfiguration configurat
         if (!IsConfigured)
             throw new AiPlanUnavailableException(
                 "Local AI is not enabled. Install Ollama and set LocalAi__Model, or use the built-in guided commands.");
+        if (!Uri.TryCreate(endpoint, UriKind.Absolute, out var localUri) ||
+            localUri.Scheme != Uri.UriSchemeHttp || localUri.Port != 11434 ||
+            localUri.AbsolutePath != "/api/chat" ||
+            !(localUri.IsLoopback || localUri.Host.Equals("host.docker.internal",
+                StringComparison.OrdinalIgnoreCase)))
+            throw new AiPlanUnavailableException(
+                "Local AI must use a loopback or Docker-host Ollama endpoint on port 11434. Remote AI endpoints are blocked.");
         if (request.Prompt is null || request.Prompt.Length is < 3 or > 800)
             throw new AiPlanValidationException("Describe your request in 3–800 characters.");
         var source = await datasets.GetAsync(request.DatasetId, ct)
