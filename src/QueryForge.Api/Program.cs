@@ -34,6 +34,7 @@ builder.Services.AddSingleton<IDataInsightsService, DeterministicDataInsightsSer
 builder.Services.AddSingleton<ReadOnlyEtlAdvisor>();
 builder.Services.AddScoped<IDatasetRepository, EfDatasetRepository>();
 builder.Services.AddScoped<CsvImportService>();
+builder.Services.AddScoped<StudioImportService>();
 // One pooled data source per API process; small bounded batches use short-lived connections.
 builder.Services.AddSingleton(NpgsqlDataSource.Create(
     builder.Configuration.GetConnectionString("QueryForge")
@@ -157,6 +158,7 @@ app.MapAnalyticsEndpoints();
 app.MapAdvisoryWorkflowEndpoints();
 app.MapStreamDatasetEndpoints();
 app.MapPipelineDemoEndpoints();
+app.MapStudioImportEndpoints();
 
 app.Run();
 
