@@ -2,10 +2,10 @@
 
 **An open-source, local-first data preparation and analytics workspace built with ASP.NET Core, PostgreSQL and DuckDB.**
 
-> **Current status: v0.7 development prototype, draft PR #29, NOT production-ready.**
+> **Current status: v0.8 development prototype, draft PR #30, NOT production-ready.**
 > The current working application code is on stacked feature branches, **not** on `main`. The project is designed to run privately on your Windows/Mac/Linux workstation through Docker—not as a paid hosted service.
 
-## What you can try in v0.7
+## What you can try in v0.8
 
 | Feature | Actual capability |
 | --- | --- |
@@ -17,11 +17,12 @@
 | Advanced Mode | Drag or click operations; reorder **linear** pipeline; configure settings in Inspector |
 | ETL preview / apply | 15 allowlisted operations; real `EtlPipeline`, audit + preview fingerprint, explicit apply into a derived dataset with lineage |
 | Charts | Backend-calculated category counts, category sums and numeric histograms with source-backed values |
+| **v0.8 Pivot Explorer** | Server-calculated 1D/2D pivots, Count/Sum/weighted Average, exact-decimal grand totals, charts and CSV export; 20×12 category cap |
 | Report | Deterministic quality/analytics narrative export (JSON), no invented AI numbers |
 | Optional natural-language planner | Self-hosted **Ollama**; proposes allowlisted steps, deterministic C# validation, no auto-apply |
 | v0.6 typed DAG + DuckDB | Separate synthetic-only compiler/executor demo. **Not yet attached to uploaded user datasets.** |
 
-The UI deliberately stays **linear** in this version. Branching DAGs, multi-table joins, full pivot/semantic-model functionality, unrestricted AI and large-file editable analytics are **not implemented**.
+The ETL UI stays **linear** in this version. The v0.8 Pivot Explorer is real, but full enterprise pivot/semantic-model functionality, branching DAGs, multi-table joins, unrestricted AI, and large-file editable analytics are **not implemented**.
 
 ## Installation — Windows, D: drive
 
@@ -33,7 +34,7 @@ Set-Location D:\Projects
 git clone https://github.com/mickeymosa/QueryForge.git
 Set-Location D:\Projects\QueryForge
 git fetch origin
-git switch --track origin/feat/local-workspace-v0.7
+git switch --track origin/feat/pivot-analytics-studio-v0.8
 docker compose up --build -d
 docker compose ps
 ```
@@ -45,7 +46,7 @@ If the repository is already cloned, use:
 ```powershell
 cd D:\Projects\QueryForge
 git fetch origin
-git switch --track origin/feat/local-workspace-v0.7
+git switch --track origin/feat/pivot-analytics-studio-v0.8
 docker compose up --build -d
 ```
 
@@ -59,6 +60,7 @@ Don't use `docker compose down -v` unless you intentionally want to delete your 
 4. Review the same resulting steps in **Advanced Mode**, drag/reorder nodes, click a node to edit its arguments, then **Preview changes**.
 5. Inspect the before/after counts and audit, then **Apply & save new dataset**. The original data remains stored.
 6. In **Visualize & report**, build a category chart and read its actual numeric values and evidence-based report.
+7. Return to **Data sources**, choose **Try pivot sales data**, then under Visualize & report use **Pivot Explorer**. Set Rows=`city`, Columns=`category`, Calculation=`Sum`, Value=`amount`. Expected grand total: **EUR 605**, with city totals Al Wakrah 100, Doha 230 and Lusail 275.
 
 For XLSX, save a workbook with a first row of unique headers and a few synthetic data rows; upload it the same way as CSV. Do not test with confidential workbook data.
 
@@ -78,7 +80,7 @@ The API talks to the Docker host through `host.docker.internal:11434`; Ollama mu
 
 ## Architecture and tests
 
-- Backend: **.NET 10 ASP.NET Core** minimal API, deterministic quality and ETL services.
+- Backend: **.NET 10 ASP.NET Core** minimal API, deterministic quality, ETL and typed `PivotService` (weighted average and strict unit checks).
 - Metadata/legacy storage: **PostgreSQL** via EF Core; v2 streaming row storage via Npgsql.
 - Analytical foundation: **DuckDB.NET** plus a typed DAG-to-SQL compiler; execution against synthetic sample only at this stage.
 - UI: dependency-free, responsive HTML/CSS/JavaScript served locally, with native drag-and-drop. A full React/TypeScript graph designer is a future milestone, not a present dependency.
@@ -92,11 +94,12 @@ docker compose logs --tail=100
 
 ## Technical notes and roadmap
 
+- [Pivot Explorer v0.8: calculations, exact precision, examples, limits and testing](docs/product/pivot-explorer-v0.8.md)
 - [Studio v0.7: real user flows, API endpoints, constraints and testing](docs/product/local-first-studio-v0.7.md)
 - [ADR-0003: typed pipeline compilation and DuckDB execution](docs/architecture/adr-0003-typed-pipeline-duckdb.md)
 - [ADR-0002: streamed CSV ingestion and resource limits](docs/engineering/adr-0002-resource-safety-streaming.md)
 - [Reproducible typed compiler JSON example](examples/typed-pipeline-demo.json)
-- [Draft PR #29](https://github.com/mickeymosa/QueryForge/pull/29) — reviewed/merged **only with owner approval**
+- [Draft PR #30: Pivot Explorer](https://github.com/mickeymosa/QueryForge/pull/30) (stacked on [draft PR #29: Local Studio](https://github.com/mickeymosa/QueryForge/pull/29)) — reviewed/merged **only with owner approval**
 
 ## Security disclaimer
 
