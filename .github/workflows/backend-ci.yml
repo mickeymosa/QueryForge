@@ -199,6 +199,62 @@ jobs:
             http://127.0.0.1:5080/api/pipelines/demo/preview)
           test "$BAD_SOURCE_STATUS" -eq 400
           jq -e '.error | contains("not approved")' /tmp/pipeline-rejected-response.json
+          echo 'Testing new local Studio UI and optional AI disabled state'
+          curl -fsS http://127.0.0.1:5080/ > /tmp/qf-studio.html
+          grep -q 'Bring your data to life' /tmp/qf-studio.html
+          grep -q 'stepColumnFree' /tmp/qf-studio.html
+          curl -fsS http://127.0.0.1:5080/legacy.html > /tmp/qf-legacy.html
+          grep -q 'Your data deserves a second look' /tmp/qf-legacy.html
+          curl -fsS http://127.0.0.1:5080/assets/qf-studio.js > /tmp/qf-studio.js
+          curl -fsS http://127.0.0.1:5080/assets/qf-studio.css > /tmp/qf-studio.css
+          node --check /tmp/qf-studio.js
+          grep -q 'prefers-reduced-motion' /tmp/qf-studio.css
+          curl -fsS http://127.0.0.1:5080/api/studio/assistant/status > /tmp/studio-ai-status.json
+          jq -e '.configured == false and .mode == "not-configured"' /tmp/studio-ai-status.json
+          curl -fsS -F 'file=@src/QueryForge.Api/wwwroot/samples/orders.csv' \
+            http://127.0.0.1:5080/api/studio/import > /tmp/studio-csv.json
+          jq -e '.rowCount == 7 and .fileMode == "editable-small-data"' /tmp/studio-csv.json
+          STUDIO_ID=$(jq -r '.id' /tmp/studio-csv.json)
+          curl -fsS -H 'Content-Type: application/json' \
+            -d '{"pipelineName":"Visual Studio ETL","steps":[{"operation":"Trim"},{"operation":"DropDuplicates","column":"order_id"}]}' \
+            "http://127.0.0.1:5080/api/datasets/$STUDIO_ID/etl/preview" > /tmp/studio-preview.json
+          jq -e '.rowCountAfter == 6 and .audit[1].affectedRows == 1' /tmp/studio-preview.json
+          echo 'Creating a real OpenXML .xlsx workbook with Python stdlib (no external test dependencies)'
+          python3 - <<'PY'
+          from zipfile import ZipFile, ZIP_DEFLATED
+          from xml.sax.saxutils import escape
+          p='/tmp/queryforge-studio-test.xlsx'
+          types='<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>'
+          root='<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'
+          workbook='<?xml version="1.0" encoding="UTF-8"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Orders" sheetId="1" r:id="rId1"/></sheets></workbook>'
+          rels='<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>'
+          def txt(ref,value):
+              return '<c r="'+ref+'" t="inlineStr"><is><t>'+escape(value)+'</t></is></c>'
+          rows=[
+              '<row r="1">'+txt('A1','order_id')+txt('B1','amount')+txt('C1','currency')+'</row>',
+              '<row r="2">'+txt('A2','X001')+'<c r="B2"><v>50</v></c>'+txt('C2','EUR')+'</row>',
+              '<row r="3">'+txt('A3','X002')+'<c r="B3"><v>25</v></c>'+txt('C3','EUR')+'</row>'
+          ]
+          sheet='<?xml version="1.0" encoding="UTF-8"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="A1:C3"/><sheetViews><sheetView workbookViewId="0"/></sheetViews><sheetFormatPr defaultRowHeight="15"/><sheetData>'+''.join(rows)+'</sheetData></worksheet>'
+          with ZipFile(p,'w',ZIP_DEFLATED) as z:
+              for name,body in [
+                  ('[Content_Types].xml',types),('_rels/.rels',root),('xl/workbook.xml',workbook),
+                  ('xl/_rels/workbook.xml.rels',rels),('xl/worksheets/sheet1.xml',sheet)
+              ]:
+                  z.writestr(name,body)
+          print('Created',p)
+          PY
+          curl -fsS -F 'file=@/tmp/queryforge-studio-test.xlsx' \
+            http://127.0.0.1:5080/api/studio/import > /tmp/studio-xlsx.json
+          jq -e '.rowCount == 2 and .headers == ["order_id","amount","currency"]' /tmp/studio-xlsx.json
+          XLSX_ID=$(jq -r '.id' /tmp/studio-xlsx.json)
+          curl -fsS "http://127.0.0.1:5080/api/datasets/$XLSX_ID/preview?limit=2" > /tmp/xlsx-preview.json
+          jq -e '.rows[0].amount == "50" and .rows[1].amount == "25"' /tmp/xlsx-preview.json
+          printf 'garbage' > /tmp/queryforge-unsupported.txt
+          STUDIO_INVALID=$(curl -sS -o /tmp/studio-invalid.json -w '%{http_code}' \
+            -F 'file=@/tmp/queryforge-unsupported.txt' http://127.0.0.1:5080/api/studio/import)
+          test "$STUDIO_INVALID" -eq 400
+          echo 'Local Studio HTML/JavaScript, CSV, XLSX and ETL integration checks passed'
           echo 'Typed DAG compiler and DuckDB deterministic demo checks passed'
           echo "HTTP/database/upload/ETL-preview/ETL-apply/provenance/metric smoke test passed"
       - name: Show logs on failure
