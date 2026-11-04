@@ -201,6 +201,21 @@ public sealed class PivotServiceTests
     }
 
     [Fact]
+    public void LargeDecimalTotals_ArePreservedAsExactStringsForJavaScript()
+    {
+        string[] headers=["order_id","region","product","amount","currency"];
+        var rows=new List<Dictionary<string,string>>
+        {
+            Row("X1","EU","A","9007199254740993.15","EUR"),
+            Row("X2","EU","A","1.05","EUR")
+        };
+        var result=service.Build(Build(headers,rows),
+            new("region","product",PivotAggregate.Sum,"amount"));
+        Assert.Equal("9007199254740994.20",result.GrandTotal);
+        Assert.Equal("9007199254740994.20",result.Rows[0].Values[0]);
+    }
+
+    [Fact]
     public void SourceJsonRemainsUnchangedAndResponseIsBounded()
     {
         var source=Source();
