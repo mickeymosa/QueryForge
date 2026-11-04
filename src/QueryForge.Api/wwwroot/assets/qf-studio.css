@@ -184,3 +184,13 @@ body.easy-mode .inspector-panel{grid-column:auto}
   .chart-area{max-width:100%;min-width:0;overflow-x:auto;contain:paint}
   .chart-area svg{width:100%;min-width:0;height:auto}
 }
+
+/* Narrow devices: keep nav actions within available width and use a compact
+   source-backed chart table instead of its 450px desktop minimum. */
+@media(max-width:570px){
+ .sidebar .nav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px;overflow:visible;contain:none;width:100%}
+ .sidebar .nav-item{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-width:0;width:100%;padding:7px 3px;font-size:.69rem;gap:2px;white-space:normal;line-height:1.15}
+ .sidebar .nav-icon{font-size:1.05rem;width:auto}
+ #chartTable table{min-width:0;width:100%;table-layout:fixed}
+ #chartTable th,#chartTable td{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:9px 5px}
+}
