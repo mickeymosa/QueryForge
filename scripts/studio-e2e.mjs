@@ -62,6 +62,8 @@ try{
   await page.screenshot({path:'artifacts/studio-mobile.png',fullPage:true});
   const overflow=await page.evaluate(()=>({
     width:document.documentElement.scrollWidth,
+    innerWidth:window.innerWidth,
+    bodyWidth:document.body.scrollWidth,
     elements:[...document.querySelectorAll('body *')].map(el=>{
       const r=el.getBoundingClientRect();
       return {tag:el.tagName,id:el.id,cls:String(el.className||'').slice(0,70),
@@ -69,8 +71,14 @@ try{
     }).filter(x=>x.right>window.innerWidth+3||x.left< -3)
       .sort((a,b)=>b.right-a.right).slice(0,15)
   }));
-  console.log('Mobile width diagnosis:',JSON.stringify(overflow));
-  assert.ok(overflow.width<=396,'Mobile page overflows width: '+overflow.width);
+  const sideways=await page.evaluate(()=>{
+    window.scrollTo({left:1000,top:0,behavior:'instant'});
+    return window.scrollX;
+  });
+  console.log('Mobile width diagnosis:',JSON.stringify({...overflow,sideways}));
+  assert.ok(overflow.elements.length===0,
+    'One or more visible elements extend beyond the mobile viewport: '+JSON.stringify(overflow.elements));
+  assert.ok(sideways<=3,'Page can be scrolled horizontally on mobile: '+sideways+'px');
   console.log('Browser mobile viewport overflow check passed');
 
   await page.setViewportSize({width:1440,height:900});
