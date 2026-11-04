@@ -19,8 +19,8 @@ public sealed record PivotRequest(
 
 public sealed record PivotRow(
     string Label,
-    IReadOnlyList<decimal?> Values,
-    decimal? Total,
+    IReadOnlyList<string?> Values,
+    string? Total,
     int Records);
 
 public sealed record PivotResult(
@@ -37,8 +37,8 @@ public sealed record PivotResult(
     bool ExcludeFlaggedRows,
     IReadOnlyList<string> ColumnLabels,
     IReadOnlyList<PivotRow> Rows,
-    IReadOnlyList<decimal?> ColumnTotals,
-    decimal? GrandTotal,
+    IReadOnlyList<string?> ColumnTotals,
+    string? GrandTotal,
     IReadOnlyList<string> Notes);
 
 public sealed class PivotValidationException(string message) : Exception(message);
@@ -66,6 +66,11 @@ public sealed class PivotService
                 _ => throw new PivotValidationException("Unsupported aggregation.")
             };
     }
+
+    // Send exact decimal text over JSON: JavaScript Number can otherwise silently
+    // round high-precision financial totals while rendering or exporting.
+    private static string? Exact(decimal? value) =>
+        value?.ToString(CultureInfo.InvariantCulture);
 
     private static string Category(Dictionary<string, string> row, string header)
     {
@@ -184,30 +189,30 @@ public sealed class PivotService
 
         var categories = rowNames.Values.OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
             .ThenBy(x => x, StringComparer.Ordinal).ToArray();
-        var columns = (request.ColumnDimension is null or ""
+        string[] columns = request.ColumnDimension is null or ""
             ? ["All records"]
             : colNames.Values.OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
-                .ThenBy(x => x, StringComparer.Ordinal).ToArray());
+                .ThenBy(x => x, StringComparer.Ordinal).ToArray();
         var result = categories.Select(label =>
             new PivotRow(
                 label,
-                columns.Select(col => cells.TryGetValue((label,col), out var bucket)
+                columns.Select(col => Exact(cells.TryGetValue((label,col), out var bucket)
                     ? bucket.Value(request.Aggregate)
-                    : request.Aggregate == PivotAggregate.Count ? 0m : (decimal?)null).ToArray(),
-                rowTotals.TryGetValue(label, out var total)
+                    : request.Aggregate == PivotAggregate.Count ? 0m : (decimal?)null)).ToArray(),
+                Exact(rowTotals.TryGetValue(label, out var total)
                     ? total.Value(request.Aggregate)
-                    : request.Aggregate == PivotAggregate.Count ? 0m : null,
+                    : request.Aggregate == PivotAggregate.Count ? 0m : null),
                 rowTotals.TryGetValue(label, out var records) ? records.Records : 0
             )).ToArray();
 
-        decimal?[] columnValues = columns.Select(col => columnTotals.TryGetValue(col, out var total)
+        string?[] columnValues = columns.Select(col => Exact(columnTotals.TryGetValue(col, out var total)
             ? total.Value(request.Aggregate)
-            : request.Aggregate == PivotAggregate.Count ? 0m : (decimal?)null).ToArray();
+            : request.Aggregate == PivotAggregate.Count ? 0m : (decimal?)null)).ToArray();
         return new(dataset.Id,dataset.Sha256,request.RowDimension,
             request.ColumnDimension is null or "" ? null : request.ColumnDimension,
             request.Aggregate == PivotAggregate.Count ? null : request.Measure,
             request.Aggregate,unit,selected.Count,rows.Count-selected.Count,
             invalid,request.ExcludeFlaggedRows,columns,result,
-            columnValues,grand.Value(request.Aggregate),notes);
+            columnValues,Exact(grand.Value(request.Aggregate)),notes);
     }
 }
