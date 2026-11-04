@@ -100,7 +100,7 @@ public sealed class PivotService
             throw new PivotValidationException("Row and column dimensions must be different.");
         if (!Enum.IsDefined(request.Aggregate))
             throw new PivotValidationException("Unsupported aggregation.");
-        if (request.Aggregate is PivotAggregate.Sum or PivotAggregate.Average &&
+        if ((request.Aggregate is PivotAggregate.Sum or PivotAggregate.Average) &&
             (string.IsNullOrWhiteSpace(request.Measure) ||
              !headers.Contains(request.Measure, StringComparer.Ordinal)))
             throw new PivotValidationException("Sum and average require an existing numeric measure.");
