@@ -1,0 +1,9 @@
+order_id,city,category,amount,currency,order_date
+S001,Doha,Hardware,120,EUR,2026-10-01
+S002,Doha,Software,80,EUR,2026-10-02
+S003,Lusail,Hardware,50,EUR,2026-10-03
+S004,Lusail,Software,150,EUR,2026-10-04
+S005,Doha,Hardware,30,EUR,2026-10-05
+S006,Al Wakrah,Software,60,EUR,2026-10-06
+S007,Al Wakrah,Hardware,40,EUR,2026-10-07
+S008,Lusail,Hardware,75,EUR,2026-10-08

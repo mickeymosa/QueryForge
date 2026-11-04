@@ -8,6 +8,7 @@
   <title>QueryForge · Local Data Studio</title>
   <link rel="stylesheet" href="/assets/qf-studio.css">
   <script src="/assets/qf-studio.js" defer></script>
+  <script src="/assets/qf-pivot.js" defer></script>
 </head>
 <body>
 <div class="app">
@@ -67,6 +68,7 @@
             <div class="import-actions">
               <button type="button" class="button primary" id="chooseBtn">Choose a file <span>↗</span></button>
               <button type="button" class="button light" id="sampleBtn">Try sample data</button>
+              <button type="button" class="button outline" id="pivotSampleBtn">Try pivot sales data</button>
             </div>
             <p class="fineprint">Excel uses the first worksheet and its first row as column headers. Uploads are limited to 3,000 rows / 40 columns for editable ETL.</p>
           </section>
@@ -168,6 +170,47 @@
               <button class="button light full" id="exportReport" type="button" disabled>Download evidence (.json)</button>
             </aside>
           </div>
+          <section class="panel pivot-panel" id="pivotPanel" aria-labelledby="pivotHeading">
+            <div class="section-header pivot-titlebar">
+              <div>
+                <span class="tiny-badge">PIVOT EXPLORER · v0.8</span>
+                <h3 id="pivotHeading">Explore every angle of your data.</h3>
+                <p class="subtext">Choose dimensions and a calculation. QueryForge builds the matrix on the backend—no spreadsheet formulas required.</p>
+              </div>
+              <span class="flow-pill">Source-backed &amp; read-only</span>
+            </div>
+            <div class="pivot-controls">
+              <label>Rows (dimension)<select id="pivotRows" aria-label="Pivot row dimension"></select></label>
+              <label>Columns (optional)<select id="pivotColumns" aria-label="Pivot column dimension"></select></label>
+              <label>Calculation
+                <select id="pivotAggregate">
+                  <option value="Count">Count records</option>
+                  <option value="Sum">Sum</option>
+                  <option value="Average">Average (weighted)</option>
+                </select>
+              </label>
+              <label>Value field<select id="pivotMeasure" aria-label="Pivot numeric measure" disabled></select></label>
+            </div>
+            <div class="pivot-actionbar">
+              <label class="pivot-exclude"><input type="checkbox" id="pivotExclude" checked> Exclude quality-flagged rows</label>
+              <div class="pivot-buttons">
+                <button type="button" class="button primary" id="buildPivot">Build pivot table →</button>
+                <button type="button" class="button light" id="exportPivot" disabled>Export table (.csv)</button>
+              </div>
+            </div>
+            <div id="pivotMessage" class="pivot-message" role="status" aria-live="polite">Select your dimensions and build a pivot to see calculated values.</div>
+            <div class="pivot-stats" id="pivotStats" hidden></div>
+            <div class="pivot-result" id="pivotResult" hidden>
+              <div class="pivot-table-header"><div><h3>Pivot table</h3><p class="subtext" id="pivotMeta"></p></div><span class="pivot-engine">Calculated by C#</span></div>
+              <div class="pivot-table-scroll" id="pivotTable" role="region" aria-label="Pivot table, horizontally scrollable" tabindex="0"></div>
+              <div class="pivot-visual-head">
+                <div><h3>Visual comparison</h3><p class="subtext">The visualization uses the same row totals as the pivot above.</p></div>
+                <label>Display <select id="pivotChartKind"><option value="bars">Bars</option><option value="line">Line</option></select></label>
+              </div>
+              <div class="pivot-chart" id="pivotChart" aria-live="polite"></div>
+              <p class="chart-notes" id="pivotNotes"></p>
+            </div>
+          </section>
         </div>
       </section>
       <footer class="footer">QueryForge is a local development prototype. No authentication or tenant isolation. Avoid confidential data. · <a href="https://github.com/mickeymosa/QueryForge" target="_blank" rel="noopener noreferrer">GitHub repository</a></footer>

@@ -198,3 +198,54 @@ body.easy-mode .inspector-panel{grid-column:auto}
 /* Root scroll boundary: all phone-visible surfaces now fit within the viewport.
    Wide data grids scroll inside .table-scroll, never by shifting the whole app. */
 html,body{overflow-x:clip}
+
+/* v0.8 — source-backed Pivot Explorer */
+.pivot-panel{margin-top:18px;padding:27px}
+.pivot-titlebar h3{font-size:1.37rem;margin:8px 0}
+.pivot-titlebar .subtext{max-width:700px;margin-bottom:12px}
+.pivot-controls{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px;margin:18px 0}
+.pivot-controls select{width:100%}
+.pivot-actionbar{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:13px 0;border-top:1px solid #edf0f2}
+.pivot-exclude{display:flex;flex-direction:row;align-items:center;gap:9px;font-weight:500;color:#627b8c}
+.pivot-exclude input{margin:0;width:15px;accent-color:#108d80}
+.pivot-buttons{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.pivot-message{background:#eef8f5;color:#367568;border:1px solid #cfebe1;padding:12px 14px;border-radius:9px;font-size:.83rem;line-height:1.6}
+.pivot-message.is-error{color:#994044;border-color:#fac4c4;background:#fff3f3}
+.pivot-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:17px 0}
+.pivot-stat{background:#f8fbfc;border:1px solid #e4ecee;border-radius:11px;padding:14px;min-width:0}
+.pivot-stat strong{display:block;font-size:1.35rem;color:#1b4650;overflow-wrap:anywhere}
+.pivot-stat span{font-size:.77rem;color:#8a99a8}
+.pivot-result{margin-top:21px}
+.pivot-table-header,.pivot-visual-head{display:flex;justify-content:space-between;align-items:flex-end;gap:13px}
+.pivot-table-header h3,.pivot-visual-head h3{margin-bottom:3px}
+.pivot-table-header .subtext,.pivot-visual-head .subtext{margin:4px 0 13px}
+.pivot-engine{font-size:.7rem;color:#0c8575;font-weight:750;border-radius:20px;background:#e9f7f1;padding:7px 10px;white-space:nowrap}
+.pivot-table-scroll{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;border:1px solid #dae8ec;border-radius:11px;contain:paint}
+table.pivot-matrix{border-collapse:separate;border-spacing:0;min-width:550px;max-width:none;width:100%;font-variant-numeric:tabular-nums}
+.pivot-matrix caption{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.pivot-matrix th,.pivot-matrix td{padding:12px 13px;text-align:right;border-bottom:1px solid #e6edef;max-width:none;overflow:visible}
+.pivot-matrix thead th{position:sticky;top:0;background:#eaf5f3;color:#315c59;z-index:2}
+.pivot-matrix thead th:first-child,.pivot-matrix tbody th,.pivot-matrix tfoot th{text-align:left}
+.pivot-matrix tbody th{background:#f7fafb;color:#3c5970;position:sticky;left:0;z-index:1;font-weight:650}
+.pivot-matrix tbody tr:hover th,.pivot-matrix tbody tr:hover td{background:#f0f9f6}
+.pivot-matrix td.pivot-total{font-weight:800;color:#148979;background:#f0f9f6}
+.pivot-matrix tfoot td,.pivot-matrix tfoot th{background:#23394d;color:#fff;border-bottom:0;font-weight:800}
+.pivot-matrix tfoot th{position:sticky;left:0;z-index:2}
+.pivot-visual-head{margin-top:25px}
+.pivot-visual-head label{max-width:160px}
+.pivot-visual-head select{width:135px}
+.pivot-chart{border:1px solid #e0eaed;border-radius:12px;padding:17px;background:#fcfefe;overflow-x:auto;max-width:100%;contain:paint}
+.pivot-chart svg{width:100%;min-width:550px;max-height:760px;display:block}
+.pivot-empty{padding:30px;text-align:center;color:#8a9dad}
+@media(max-width:1150px){.pivot-controls{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:570px){
+ .pivot-panel{padding:17px}
+ .pivot-controls{grid-template-columns:1fr;gap:10px}
+ .pivot-actionbar{align-items:stretch;flex-direction:column}
+ .pivot-buttons{display:flex}
+ .pivot-buttons .button{flex:1 1 auto}
+ .pivot-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .pivot-titlebar,.pivot-table-header,.pivot-visual-head{align-items:flex-start;flex-direction:column}
+ .pivot-visual-head label{max-width:100%;width:100%}
+ .pivot-visual-head select{width:100%}
+}

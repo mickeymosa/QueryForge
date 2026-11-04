@@ -139,6 +139,11 @@
     renderQuality();
     renderCanvas();renderEditor();
     if(!state.large)populateChartControls();
+    // Other Studio modules receive the current, server-loaded dataset metadata.
+    // Do not share mutable state or raw rows across modules.
+    window.dispatchEvent(new CustomEvent('queryforge:dataset-selected',{
+      detail:{id:d.id,headers:[...d.headers],fileName:d.fileName,large:state.large}
+    }));
   }
   async function loadDataset(id,large=false){
     notice('Opening dataset…');
@@ -472,6 +477,14 @@
       try{
         const response=await fetch('/samples/orders.csv');if(!response.ok)throw new Error('Sample file unavailable.');
         const blob=await response.blob();await importFile(new File([blob],'orders.csv',{type:'text/csv'}));
+      }catch(e){notice(e.message,true);}
+    });
+    $('pivotSampleBtn').addEventListener('click',async()=>{
+      try{
+        const response=await fetch('/samples/pivot-sales.csv');
+        if(!response.ok)throw new Error('Pivot demo file unavailable.');
+        const blob=await response.blob();
+        await importFile(new File([blob],'pivot-sales.csv',{type:'text/csv'}));
       }catch(e){notice(e.message,true);}
     });
     $('toPrepare').addEventListener('click',()=>go('prepare'));
