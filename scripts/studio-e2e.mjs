@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, readFile } from 'node:fs/promises';
 import { chromium } from 'playwright-core';
 
 const base=process.env.STUDIO_BASE_URL || 'http://127.0.0.1:5080';
@@ -145,6 +145,17 @@ try{
   assert.deepEqual(sales.rows.find(r=>r.label==='Doha').values,['150','80']);
   assert.equal(sales.rows.find(r=>r.label==='Lusail').total,'275');
   assert.equal(await page.locator('#pivotTable tfoot td').last().innerText(),'605');
+  const [exported]=await Promise.all([
+    page.waitForEvent('download'),
+    page.locator('#exportPivot').click()
+  ]);
+  assert.match(exported.suggestedFilename(),/^queryforge-pivot-.*\.csv$/);
+  const exportedCsv=await readFile(await exported.path(),'utf8');
+  assert.ok(exportedCsv.includes('"Doha","150","80","230"'),
+    'Pivot CSV must preserve source-backed Doha totals');
+  assert.ok(exportedCsv.includes('"Grand total","315","290","605"'),
+    'Pivot CSV grand totals must match the backend matrix');
+  console.log('Browser pivot CSV download contains exact matrix values');
   await page.screenshot({path:'artifacts/studio-pivot-sales.png',fullPage:true});
   console.log('Browser sales pivot: Doha 230, Lusail 275, Al Wakrah 100, total EUR 605');
 
