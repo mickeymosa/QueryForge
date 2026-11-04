@@ -58,6 +58,27 @@ try{
   await page.screenshot({path:'artifacts/studio-chart.png',fullPage:true});
   console.log('Browser source-backed chart and report view passed');
 
+  // A real pivot request, not a hardcoded frontend matrix.
+  await page.locator('#pivotRows').selectOption('currency');
+  await page.locator('#pivotColumns').selectOption('paid');
+  await page.locator('#pivotExclude').uncheck();
+  const pivotResponse=page.waitForResponse(r=>
+    r.url().includes('/pivot/preview') && r.request().method()==='POST');
+  await page.locator('#buildPivot').click();
+  const pivotHttp=await pivotResponse;
+  assert.equal(pivotHttp.status(),200,'Pivot endpoint must return HTTP 200');
+  const pivot=await pivotHttp.json();
+  assert.equal(pivot.grandTotal,'6','Count must use actual 6-row post-ETL dataset');
+  assert.equal(pivot.includedRows,6);
+  assert.deepEqual(pivot.columnLabels,['false','true']);
+  assert.equal(await page.locator('#pivotResult').isVisible(),true);
+  assert.equal(await page.locator('#pivotTable tbody tr').count(),pivot.rows.length);
+  assert.equal(await page.locator('#exportPivot').isEnabled(),true);
+  await page.locator('#pivotChartKind').selectOption('line');
+  await page.locator('#pivotChart svg').waitFor();
+  await page.screenshot({path:'artifacts/studio-pivot.png',fullPage:true});
+  console.log('Browser real pivot, source counts, matrix and linked chart passed');
+
   await page.setViewportSize({width:390,height:844});
   await page.screenshot({path:'artifacts/studio-mobile.png',fullPage:true});
   const overflow=await page.evaluate(()=>({
@@ -66,10 +87,22 @@ try{
     bodyWidth:document.body.scrollWidth,
     elements:[...document.querySelectorAll('body *')].map(el=>{
       const r=el.getBoundingClientRect();
+      const outside=r.right>window.innerWidth+3||r.left< -3;
+      if(!outside)return null;
+      // Wide pivot matrices and charts are scrollable within their own panels.
+      // Ignore their off-screen children only when a visible ancestor clips them.
+      for(let ancestor=el.parentElement;ancestor;ancestor=ancestor.parentElement){
+        const style=getComputedStyle(ancestor);
+        const clipped=['auto','scroll','hidden','clip'].includes(style.overflowX) ||
+          style.contain.includes('paint');
+        if(clipped){
+          const box=ancestor.getBoundingClientRect();
+          if(box.left>=-3 && box.right<=window.innerWidth+3)return null;
+        }
+      }
       return {tag:el.tagName,id:el.id,cls:String(el.className||'').slice(0,70),
         left:Math.round(r.left),right:Math.round(r.right),width:Math.round(r.width)};
-    }).filter(x=>x.right>window.innerWidth+3||x.left< -3)
-      .sort((a,b)=>b.right-a.right).slice(0,15)
+    }).filter(Boolean).sort((a,b)=>b.right-a.right).slice(0,15)
   }));
   const sideways=await page.evaluate(()=>{
     window.scrollTo({left:1000,top:0,behavior:'instant'});
