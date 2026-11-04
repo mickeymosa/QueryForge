@@ -194,3 +194,7 @@ body.easy-mode .inspector-panel{grid-column:auto}
  #chartTable table{min-width:0;width:100%;table-layout:fixed}
  #chartTable th,#chartTable td{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:9px 5px}
 }
+
+/* Root scroll boundary: all phone-visible surfaces now fit within the viewport.
+   Wide data grids scroll inside .table-scroll, never by shifting the whole app. */
+html,body{overflow-x:clip}
