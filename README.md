@@ -1,87 +1,105 @@
 # QueryForge
 
-**A self-hostable, learning-led data quality and analytics platform.**
+**An open-source, local-first data preparation and analytics workspace built with ASP.NET Core, PostgreSQL and DuckDB.**
 
-> **Development status (November 2026): Local-only prototype. NOT production-ready.**
-> The full code is currently on stacked draft branches; `main` contains the initial planning material. This branch is **v0.6**, based on v0.5. Please do not upload confidential datasets or expose its ports to the Internet.
+> **Current status: v0.7 development prototype, draft PR #29, NOT production-ready.**
+> The current working application code is on stacked feature branches, **not** on `main`. The project is designed to run privately on your Windows/Mac/Linux workstation through Docker—not as a paid hosted service.
 
-## What exists on this development branch
+## What you can try in v0.7
 
-| Capability | Status |
+| Feature | Actual capability |
 | --- | --- |
-| .NET 10 API, PostgreSQL, Docker Compose | Local prototype |
-| CSV quality checks and controlled ETL/visualization | Legacy small-data path (2 MiB, 3,000 rows) |
-| Incremental CSV ingest with paged DB row reads | Separate v2 route (25 MiB, 30,000 rows); **large-data ETL is NOT connected** |
-| Typed DAG compiler (Source/Filter/Select/Aggregate) | Implemented with Kahn sorting, schema/type checks and SQL parameters |
-| DuckDB analytics execution | **Only** the shipped synthetic `demo_orders` file; restricted preview, max 100 result rows |
-| Easy/Advanced React workspace, real-world Parquet execution, visual branching DAG | Not implemented |
-| AI agent/LLM, user accounts, multi-tenant permission boundary | Not implemented |
+| Modern unified Studio UI | Source upload, quality overview, prepare, visualize and evidence report in one page |
+| CSV edit and validation | <=2 MiB, <=3,000 rows, <=40 columns; existing deterministic C# quality checks |
+| Excel `.xlsx` import | First sheet, first row as column names, converted to bounded CSV; same editable limits |
+| Large CSV import | <=25 MiB, <=30,000 rows, <=80 columns; **read-only paged preview**, no v2 ETL/charts yet |
+| Easy Mode | Guided, limited offline command patterns create real editable steps |
+| Advanced Mode | Drag or click operations; reorder **linear** pipeline; configure settings in Inspector |
+| ETL preview / apply | 15 allowlisted operations; real `EtlPipeline`, audit + preview fingerprint, explicit apply into a derived dataset with lineage |
+| Charts | Backend-calculated category counts, category sums and numeric histograms with source-backed values |
+| Report | Deterministic quality/analytics narrative export (JSON), no invented AI numbers |
+| Optional natural-language planner | Self-hosted **Ollama**; proposes allowlisted steps, deterministic C# validation, no auto-apply |
+| v0.6 typed DAG + DuckDB | Separate synthetic-only compiler/executor demo. **Not yet attached to uploaded user datasets.** |
 
-**Do not confuse the typed DAG compiler with a full SSIS/Power BI replacement.** The analytical foundation has intentionally narrow scope so it can be reviewed and tested.
+The UI deliberately stays **linear** in this version. Branching DAGs, multi-table joins, full pivot/semantic-model functionality, unrestricted AI and large-file editable analytics are **not implemented**.
 
-## Run locally
+## Installation — Windows, D: drive
 
-Requires Docker Desktop. Run from the cloned repository root:
+Requirements: [Git](https://git-scm.com/), [Docker Desktop](https://www.docker.com/products/docker-desktop/). The .NET SDK is optional if you only use Docker.
 
 ```powershell
+New-Item -ItemType Directory -Force D:\Projects | Out-Null
+Set-Location D:\Projects
+git clone https://github.com/mickeymosa/QueryForge.git
+Set-Location D:\Projects\QueryForge
 git fetch origin
-git switch --track origin/feat/typed-dag-duckdb-foundation-v0.6
+git switch --track origin/feat/local-workspace-v0.7
 docker compose up --build -d
 docker compose ps
 ```
 
-Visit:
-- `http://127.0.0.1:5080`: legacy small-data ETL and analytics screens.
-- `http://127.0.0.1:5080/ingest.html`: separate streaming import and paged preview.
+Visit **http://127.0.0.1:5080**. The original UI remains at `/legacy.html`; old `/etl.html`, `/analytics.html` and `/ingest.html` routes are preserved.
 
-### Run the new typed pipeline demo
-
-The only available pipeline source is a **synthetic, server-approved sample**. Its data includes EUR and USD records, so aggregations are explicitly grouped by currency.
+If the repository is already cloned, use:
 
 ```powershell
-Invoke-RestMethod -Uri http://127.0.0.1:5080/api/pipelines/compile `
-  -Method Post -ContentType 'application/json' -InFile examples/typed-pipeline-demo.json
-
-Invoke-RestMethod -Uri http://127.0.0.1:5080/api/pipelines/demo/preview `
-  -Method Post -ContentType 'application/json' -InFile examples/typed-pipeline-demo.json
+cd D:\Projects\QueryForge
+git fetch origin
+git switch --track origin/feat/local-workspace-v0.7
+docker compose up --build -d
 ```
 
-Expected synthetic aggregation after the positive-amount filter: `EUR=325`, `USD=50`. Run the unit tests using the .NET 10 SDK:
+Don't use `docker compose down -v` unless you intentionally want to delete your local PostgreSQL data. The Docker Compose ports are bound to `127.0.0.1` only.
+
+### The five-minute walkthrough
+
+1. Open QueryForge, click **Try sample data** to upload a synthetic CSV.
+2. Inspect the reported quality issues and source row preview.
+3. Open **Prepare & ETL**. In Easy Mode, enter `trim extra spaces and remove duplicate order_id` and choose **Guided commands**.
+4. Review the same resulting steps in **Advanced Mode**, drag/reorder nodes, click a node to edit its arguments, then **Preview changes**.
+5. Inspect the before/after counts and audit, then **Apply & save new dataset**. The original data remains stored.
+6. In **Visualize & report**, build a category chart and read its actual numeric values and evidence-based report.
+
+For XLSX, save a workbook with a first row of unique headers and a few synthetic data rows; upload it the same way as CSV. Do not test with confidential workbook data.
+
+## Offline natural-language helper vs. AI
+
+**Guided commands** supports a small deterministic vocabulary for trim, deduplication, missing rows, sort and uppercase/lowercase. It is not an LLM.
+
+To enable an optional **actual, local language model**, install [Ollama](https://ollama.com/), choose a model that fits your computer, and opt in:
+
+```powershell
+ollama pull llama3.2
+$env:QUERYFORGE_OLLAMA_MODEL="llama3.2"
+docker compose up --build -d
+```
+
+The API talks to the Docker host through `host.docker.internal:11434`; Ollama must be reachable from the API container on that address. No remote AI service is configured by default. The prompt and source column names (not dataset rows) are sent to the locally configured model. AI proposals are checked by the C# ETL engine and **never apply automatically**. If Ollama isn't available, use Guided commands instead.
+
+## Architecture and tests
+
+- Backend: **.NET 10 ASP.NET Core** minimal API, deterministic quality and ETL services.
+- Metadata/legacy storage: **PostgreSQL** via EF Core; v2 streaming row storage via Npgsql.
+- Analytical foundation: **DuckDB.NET** plus a typed DAG-to-SQL compiler; execution against synthetic sample only at this stage.
+- UI: dependency-free, responsive HTML/CSS/JavaScript served locally, with native drag-and-drop. A full React/TypeScript graph designer is a future milestone, not a present dependency.
+- Excel: **ExcelDataReader** MIT-licensed. CSV: CsvHelper.
+- Tests: xUnit and Docker-backed GitHub Actions HTTP/database smoke checks, including CSV/XLSX import and ETL. Manual browser validation is still necessary.
 
 ```powershell
 dotnet test tests/QueryForge.Api.Tests/QueryForge.Api.Tests.csproj
+docker compose logs --tail=100
 ```
 
-Stop without deleting your PostgreSQL data:
+## Technical notes and roadmap
 
-```powershell
-docker compose down
-```
+- [Studio v0.7: real user flows, API endpoints, constraints and testing](docs/product/local-first-studio-v0.7.md)
+- [ADR-0003: typed pipeline compilation and DuckDB execution](docs/architecture/adr-0003-typed-pipeline-duckdb.md)
+- [ADR-0002: streamed CSV ingestion and resource limits](docs/engineering/adr-0002-resource-safety-streaming.md)
+- [Reproducible typed compiler JSON example](examples/typed-pipeline-demo.json)
+- [Draft PR #29](https://github.com/mickeymosa/QueryForge/pull/29) — reviewed/merged **only with owner approval**
 
-**Never run `docker compose down -v` unless you intentionally want to erase local database volumes.**
+## Security disclaimer
 
-## Why the architecture is changing
+Development uses a local-only known test database password, no authentication/authorization and no hardened spreadsheet sandbox or OS-level analytical worker limits. Keep ports local, work with synthetic data and never claim this is production-grade or safe for confidential information. A polished interface is not a substitute for data correctness, security and load testing.
 
-The initial implementation relied on `List<Dictionary<string,string>>` and a serialized JSON dataset value. That approach was simple for early learning but creates memory amplification and poorly scalable analytical access. v0.5 introduced a separate incremental importer and individual PostgreSQL row storage. v0.6 introduces the shared typed DAG compiler and restricted DuckDB execution demo.
-
-We are evaluating **PostgreSQL for metadata + Parquet/DuckDB for analytical data**. This is an architecture direction, **not yet implemented for uploaded user datasets**. Arrow is optional interchange, not a requirement for every module.
-
-- [ADR-0002: Resource safety and streaming storage](docs/engineering/adr-0002-resource-safety-streaming.md)
-- [ADR-0003: Typed DAG compiler and DuckDB](docs/architecture/adr-0003-typed-pipeline-duckdb.md)
-- [Example pipeline JSON](examples/typed-pipeline-demo.json)
-- [Draft PR for v0.6](https://github.com/mickeymosa/QueryForge/pull/28)
-- [GitHub Actions evidence](https://github.com/mickeymosa/QueryForge/actions/runs/41695265772)
-
-## Security and release readiness
-
-This branch has **no authentication, tenant isolation, durable job orchestration or verified concurrent production workload**. DuckDB's internal memory setting does not impose a hard operating-system RSS limit; the in-process runner is deliberately restricted to synthetic data. A production worker with OS resource limits, versioned storage, ownership and permissions, migrations and load tests is still required.
-
-AI is not connected to the DAG engine. A later AI planner may propose typed, validated plans; it will not get unrestricted SQL, Python or C# execution.
-
-No pull request is auto-approved or auto-merged. A maintainer must review the code, test results, data semantics and remaining risks before promotion.
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md), and the [engineering playbook](docs/learning/engineering-playbook.md).
-
-**License:** MIT. This is an early open-source learning project, not a production data platform.
+**License:** MIT. Contributions and code review are welcome through the repository's normal process.

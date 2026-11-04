@@ -1,183 +1,178 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>QueryForge — Data Trust Workspace</title>
-<link rel="stylesheet" href="/assets/qf-modern.css">
-  <style>
-    :root { color-scheme: light; font-family: Inter,system-ui,Segoe UI,Arial,sans-serif; background:#f4f7fa; color:#13273d; }
-    * { box-sizing:border-box } body { margin:0 } button,input { font:inherit }
-    header { background:#102b46; color:white; padding:25px max(20px,calc((100vw - 960px)/2)); }
-    header strong { font-size:1.3rem } header p { color:#c7dae9; margin:8px 0 0 }
-    main { max-width:960px; margin:34px auto; padding:0 20px }
-    .steps { display:flex; flex-wrap:wrap; gap:12px; margin:0 0 22px }
-    .step { background:white; border:1px solid #dce6ee; border-radius:12px; padding:12px 16px; font-weight:600; flex:1; min-width:180px }
-    .step span { display:inline-grid; place-items:center; width:25px; height:25px; border-radius:50%; background:#d9eff3; margin-right:8px }
-    .card { background:white; border:1px solid #d9e5ee; border-radius:17px; padding:24px; margin:18px 0; box-shadow:0 6px 23px #17324c0b }
-    h1 { margin:0 0 10px; font-size:1.65rem } h2 { margin:0 0 13px; font-size:1.1rem }
-    .muted { color:#576b7b; line-height:1.55 } label { display:block; font-weight:600; margin:14px 0 8px }
-    input[type=file] { width:100%; padding:17px; border:2px dashed #a8c7d5; border-radius:10px; background:#f8fbfd }
-    button { border:0; border-radius:10px; background:#086c86; color:white; padding:12px 18px; cursor:pointer; font-weight:650 }
-    button.secondary { background:#e9f2f5; color:#10576b; margin-left:8px }
-    button:disabled { opacity:.55; cursor:wait }
-    button:focus-visible,input:focus-visible { outline:3px solid #efb449; outline-offset:2px }
-    .metrics { display:grid; grid-template-columns:repeat(auto-fit,minmax(145px,1fr)); gap:10px }
-    .metric { border-radius:10px; background:#f1f7f9; padding:14px }
-    .metric b { font-size:1.65rem; display:block }
-    .issue { padding:10px 0; border-bottom:1px solid #edf1f5; line-height:1.5 }
-    .issue:last-child { border:0 } .error { color:#a93e3e } .warning { color:#885c13 }
-    .status { min-height:24px; font-size:.92rem; margin-top:12px } .hidden { display:none }
-    select { padding:11px; border:1px solid #b5c8d4; border-radius:9px; width:100%; margin:5px 0 12px }
-    table { width:100%; border-collapse:collapse; font-size:.88rem }
-    td,th { text-align:left; padding:9px; border-bottom:1px solid #dfe8ee; max-width:240px; overflow-wrap:anywhere }
-    .scroll { overflow:auto } small { color:#587188 } footer { margin:35px 0; text-align:center; color:#576b7b; font-size:.85rem }
-  </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#101d31">
+  <meta name="description" content="QueryForge: local-first data cleaning, ETL and analytics studio.">
+  <title>QueryForge · Local Data Studio</title>
+  <link rel="stylesheet" href="/assets/qf-studio.css">
+  <script src="/assets/qf-studio.js" defer></script>
 </head>
-<body class="qf-ui">
-<header><strong>◇ QueryForge</strong><p>Know what's wrong with your data before trusting the numbers.</p></header>
-<main>
-  <div class="steps" aria-label="Three-step workflow">
-    <div class="step"><span>1</span>Upload a CSV</div>
-    <div class="step"><span>2</span>Review data quality</div>
-    <div class="step"><span>3</span>Explore safely</div>
-  </div>
-  <section class="card" aria-labelledby="uploadTitle">
-    <p class="qf-kicker">Data Trust Workspace · Local-first</p>
-    <h1 id="uploadTitle">Your data deserves a second look.</h1>
-    <p class="muted">Upload a CSV to find missing values, duplicate IDs and invalid amounts. Everything runs on your own local installation. No AI account is needed.</p>
-    <form id="uploadForm">
-      <label for="file">Choose a CSV file (maximum 2 MiB, 3,000 rows)</label>
-      <input id="file" type="file" accept=".csv,text/csv" required aria-describedby="fileInfo" />
-      <p class="qf-file-info" id="fileInfo">Choose a file or drag it onto the upload area. Max 2 MiB / 3,000 rows / 40 columns.</p>
-      <div style="margin-top:17px">
-        <button id="uploadBtn" type="submit">Analyze my file</button>
-        <button id="sampleBtn" class="secondary" type="button">Try an example</button>
-      </div>
-    </form>
-    <div class="qf-progress" id="qfUploadProgress" aria-hidden="true" hidden><span></span></div>
-    <p id="status" class="status" role="status" aria-live="polite"></p>
-  <p class="qf-note">Need 2–25 MiB or more than 3,000 rows? <a href="/ingest.html">Use Safe Large Import</a> (streamed/paged preview; advanced ETL and charts for large datasets are being migrated).</p>
-  </section>
+<body>
+<div class="app">
+  <aside class="sidebar" aria-label="Application navigation">
+    <a href="/" class="brand"><span class="brand-symbol" aria-hidden="true">◇</span><span>QueryForge<small>LOCAL DATA STUDIO</small></span></a>
+    <div class="sidebar-caption">WORKSPACE</div>
+    <nav class="nav">
+      <button type="button" class="nav-item is-active" data-view="data"><span class="nav-icon">▦</span>Data sources</button>
+      <button type="button" class="nav-item" data-view="prepare"><span class="nav-icon">◇</span>Prepare &amp; ETL</button>
+      <button type="button" class="nav-item" data-view="visualize"><span class="nav-icon">▥</span>Visualize &amp; report</button>
+    </nav>
+    <div class="sidebar-caption">YOUR DATASETS</div>
+    <div class="saved-list" id="savedDatasets"><p class="side-muted">Loading local datasets…</p></div>
+    <div class="sidebar-footer">
+      <div class="status-chip"><span class="online-dot"></span> Runs on your computer</div>
+      <p>Open source · No cloud account</p>
+      <a href="/ingest.html">Large CSV importer ↗</a>
+      <a href="/legacy.html">Original interface ↗</a>
+    </div>
+  </aside>
 
-  <section id="results" class="card hidden" aria-labelledby="qualityTitle">
-    <h2 id="qualityTitle">Data quality report</h2>
-    <div class="metrics" id="metrics"></div>
-    <p class="muted" id="provenance"></p>
-    <h2>What needs attention</h2>
-    <div id="issues"></div>
-    <h2 style="margin-top:22px">Preview</h2>
-    <div class="scroll" id="preview"></div>
-  </section>
-  <section id="etlIntro" class="card hidden">
-    <h2>Optional: Clean your data before analysis</h2>
-    <p class="muted">Want to remove extra spaces, fix values, or build your own transformations? Use Simple or Advanced mode. Preview first and keep the original file unchanged.</p>
-    <a id="etlLink" href="/etl.html" style="display:inline-block;background:#086c86;color:white;padding:12px 18px;border-radius:9px;text-decoration:none;font-weight:650">Prepare and clean this dataset</a>
-  </section>
-  <section id="studioIntro" class="card hidden">
-    <p class="qf-kicker">New · Analytics Studio</p>
-    <h2>Build charts and a source-backed report</h2>
-    <p class="muted">Explore recommended charts, choose your own measures and download an evidence-based summary. Visualizations are calculated from your dataset, not invented by AI.</p>
-    <a id="studioLink" href="/analytics.html" class="qf-button" style="display:inline-block;padding:12px 18px;text-decoration:none">Open Analytics Studio</a>
-  </section>
-  <section id="analysis" class="card hidden" aria-labelledby="analysisTitle">
-    <h2 id="analysisTitle">Simple numeric analysis</h2>
-    <p class="muted">We exclude every row flagged by quality checks. The results show exactly which values were included.</p>
-    <label for="metricColumn">Column to summarize</label>
-    <select id="metricColumn"></select>
-    <button id="metricBtn" type="button">Calculate summary</button>
-    <p id="metricResult" role="status" aria-live="polite"></p>
-  </section>
-  <footer>Local prototype · No accounts, external AI, or cloud uploads · Do not use confidential data.</footer>
-</main>
-<script>
-  const el = id => document.getElementById(id);
-  let selectedDataset = null;
-  const setText = (id, value) => { el(id).textContent = value; };
-  function metric(label, value) {
-    const box = document.createElement('div');
-    box.className = 'metric';
-    const num = document.createElement('b'); num.textContent = String(value);
-    const caption = document.createElement('span'); caption.textContent = label;
-    box.append(num, caption); return box;
-  }
-  async function analyze(file) {
-    setText('status', 'Uploading and validating your file…');
-    el('uploadBtn').disabled = true;
-    try {
-      const form = new FormData(); form.append('file', file);
-      const response = await fetch('/api/datasets', { method:'POST', body:form });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || data.title || 'Upload failed');
-      selectedDataset = data;
-      el('studioIntro').classList.remove('hidden');
-      el('studioLink').href='/analytics.html?dataset='+encodeURIComponent(data.id);
-      el('etlIntro').classList.remove('hidden');
-      el('etlLink').href='/etl.html?dataset='+encodeURIComponent(data.id);
-      const report = data.quality;
-      el('results').classList.remove('hidden');
-      el('analysis').classList.remove('hidden');
-      el('metrics').replaceChildren(
-        metric('Rows', report.rowCount),
-        metric('Columns', report.columnCount),
-        metric('Rows with warnings', report.rowsWithIssues),
-        metric('Issues detected', report.issues.length)
-      );
-      setText('provenance', 'Dataset ID: ' + data.id + ' · SHA-256: ' + data.sha256);
-      const issues = el('issues'); issues.replaceChildren();
-      if (report.issues.length === 0) {
-        const p=document.createElement('p'); p.textContent='No issues detected by the enabled rules.'; issues.append(p);
-      } else {
-        report.issues.slice(0, 30).forEach(issue => {
-          const div=document.createElement('div'); div.className='issue '+issue.severity;
-          div.textContent='Row '+issue.rowNumber+' · '+issue.column+' · '+issue.code+': '+issue.message;
-          issues.append(div);
-        });
-        if (report.issues.length > 30) {
-          const p=document.createElement('p');
-          p.textContent=(report.issues.length-30)+' additional issues not displayed here.';
-          issues.append(p);
-        }
-      }
-      const select=el('metricColumn'); select.replaceChildren();
-      data.headers.forEach(header => {
-        const option=document.createElement('option'); option.value=header; option.textContent=header;
-        select.append(option);
-      });
-      const preferred=data.headers.find(h=>h.toLowerCase()==='amount');
-      if (preferred) select.value=preferred;
-      const previewResponse=await fetch('/api/datasets/'+encodeURIComponent(data.id)+'/preview?limit=8');
-      if (!previewResponse.ok) throw new Error('Preview could not be loaded');
-      const preview=await previewResponse.json();
-      const table=document.createElement('table'), thead=document.createElement('thead');
-      const headerRow=document.createElement('tr');
-      preview.headers.forEach(h=>{const th=document.createElement('th');th.scope='col';th.textContent=h;headerRow.append(th);});
-      thead.append(headerRow); table.append(thead);
-      const tbody=document.createElement('tbody');
-      preview.rows.forEach(row=>{const tr=document.createElement('tr');preview.headers.forEach(h=>{const td=document.createElement('td');td.textContent=row[h]??'';tr.append(td);});tbody.append(tr);});
-      table.append(tbody);el('preview').replaceChildren(table);
-      setText('status','Import complete. Review the issues below.');
-    } catch (e) { setText('status','Error: '+e.message); }
-    finally { el('uploadBtn').disabled=false; }
-  }
-  el('uploadForm').addEventListener('submit', event => {
-    event.preventDefault(); const file=el('file').files[0]; if (file) analyze(file);
-  });
-  el('sampleBtn').addEventListener('click', async () => {
-    try { const response=await fetch('/samples/orders.csv');if(!response.ok)throw new Error('Sample unavailable');
-      const text=await response.text();await analyze(new File([text], 'sample-orders.csv',{type:'text/csv'}));
-    } catch(e) {setText('status','Error: '+e.message);}
-  });
-  el('metricBtn').addEventListener('click', async () => {
-    if (!selectedDataset) return;
-    setText('metricResult','Calculating…');
-    try { const response=await fetch('/api/datasets/'+selectedDataset.id+'/metrics?column='+encodeURIComponent(el('metricColumn').value));
-      const data=await response.json();if(!response.ok)throw new Error(data.error||'Calculation failed');
-      setText('metricResult','Sum: '+data.metric.sum+' · Average: '+(data.metric.average??'n/a')+
-        ' · Included rows: '+data.metric.includedRows+' · Excluded rows: '+data.metric.excludedRows);
-    } catch(e) {setText('metricResult','Error: '+e.message);}
-  });
-</script>
-<script src="/assets/qf-enhance.js" defer></script>
+  <div class="shell">
+    <header class="topbar">
+      <div class="crumbs"><span class="top-crumb">Workspace</span><span class="slash">/</span><strong id="topTitle">Data sources</strong></div>
+      <div class="top-controls">
+        <div class="environment"><span class="online-dot"></span> LOCAL WORKSPACE</div>
+        <div class="mode-switch" aria-label="Workspace complexity mode">
+          <button type="button" id="easyMode" class="is-active" aria-pressed="true">Easy</button>
+          <button type="button" id="advancedMode" aria-pressed="false">Advanced</button>
+        </div>
+        <span class="avatar" aria-label="Local user">L</span>
+      </div>
+    </header>
+    <main class="main">
+      <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+      <section class="heading">
+        <div><div class="eyebrow"><span class="eyebrow-mark">●</span> YOUR DATA, UNDER YOUR CONTROL</div>
+          <h1 id="pageTitle">Start with your data<span class="accent">.</span></h1>
+          <p id="pageSubtitle">Import a file, inspect data quality, and prepare it for analysis—without leaving this workspace.</p>
+        </div>
+        <div class="heading-actions"><span class="small-tag">v0.7 · Local prototype</span></div>
+      </section>
+
+      <section id="dataView" class="view">
+        <div class="welcome-grid">
+          <section class="panel import-panel" aria-labelledby="importTitle">
+            <div class="panel-top"><span class="tiny-badge">01 / IMPORT</span><span class="small-help">Your files stay in your local Docker environment</span></div>
+            <h2 id="importTitle">Bring your data to life</h2>
+            <p class="subtext">Upload CSV or Excel. We'll inspect columns, check for quality problems and prepare a working dataset.</p>
+            <div class="upload-zone" id="uploadZone" role="button" tabindex="0" aria-label="Choose or drop a CSV or Excel file">
+              <div class="upload-icon" aria-hidden="true">↥</div>
+              <strong>Drag your file here, or <span class="linkish">browse</span></strong>
+              <p>.csv or .xlsx · Editable files up to 2 MiB</p>
+              <p class="subtle">Larger CSV files (up to 25 MiB) open in read-only preview</p>
+              <input type="file" id="fileInput" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
+            </div>
+            <div class="import-actions">
+              <button type="button" class="button primary" id="chooseBtn">Choose a file <span>↗</span></button>
+              <button type="button" class="button light" id="sampleBtn">Try sample data</button>
+            </div>
+            <p class="fineprint">Excel uses the first worksheet and its first row as column headers. Uploads are limited to 3,000 rows / 40 columns for editable ETL.</p>
+          </section>
+          <section class="panel journey-panel">
+            <div class="panel-top"><span class="tiny-badge">HOW IT WORKS</span><span class="small-help">One connected experience</span></div>
+            <h2>From raw data to answers.</h2>
+            <div class="journey-step"><span class="journey-number">01</span><div><strong>Import &amp; inspect</strong><p>Understand your source, missing values and duplicates.</p></div></div>
+            <div class="journey-step"><span class="journey-number">02</span><div><strong>Clean it visually</strong><p>Drag transformations or describe them in plain language.</p></div></div>
+            <div class="journey-step"><span class="journey-number">03</span><div><strong>Preview &amp; approve</strong><p>See exactly what will change before saving.</p></div></div>
+            <div class="journey-step"><span class="journey-number">04</span><div><strong>Explore the results</strong><p>Generate charts and source-backed summaries.</p></div></div>
+          </section>
+        </div>
+        <section class="panel dataset-panel" id="dataDetails" hidden>
+          <div class="section-header"><div><span class="tiny-badge">DATASET OVERVIEW</span><h2 id="dataHeading">Selected dataset</h2><p id="dataDescription" class="subtext"></p></div><button class="button primary" id="toPrepare" type="button">Prepare dataset →</button></div>
+          <div class="stat-grid" id="stats"></div>
+          <div class="data-split">
+            <div><h3>Data preview</h3><div class="table-scroll" id="dataTable"></div></div>
+            <div><h3>Quality signals</h3><div id="qualitySummary" class="quality-list"></div></div>
+          </div>
+        </section>
+      </section>
+
+      <section id="prepareView" class="view" hidden>
+        <div class="workspace-info" id="prepareNotice">Import a dataset to begin preparing data.</div>
+        <div id="prepareWorkspace" hidden>
+          <div class="workspace-bar">
+            <div><div class="tiny-badge">TRANSFORMATION PIPELINE</div><h2 id="workingDatasetName">Dataset</h2><p class="subtext" id="workingDatasetMeta"></p></div>
+            <div class="bar-actions"><label class="inline-name">Pipeline name <input id="pipelineName" maxlength="80" value="My clean dataset" aria-label="Pipeline name"></label><button type="button" class="button outline" id="clearSteps">Clear steps</button></div>
+          </div>
+          <div class="prepare-layout">
+            <section class="panel tool-panel" id="toolPanel">
+              <div class="section-header compact"><div><span class="tiny-badge">BUILD YOUR FLOW</span><h3>Operations</h3></div></div>
+              <p class="subtext">Click to add a step. In Advanced Mode, drag it onto the workflow.</p>
+              <div class="tool-search"><input id="operationSearch" type="search" placeholder="Search transformations…" aria-label="Search ETL operations"></div>
+              <div class="tool-list" id="operationPalette"></div>
+            </section>
+            <section class="panel canvas-panel">
+              <div class="section-header compact"><div><span class="tiny-badge">VISUAL FLOW</span><h3>Pipeline designer</h3></div><div class="flow-pill" id="stepCount">0 steps</div></div>
+              <p class="subtext" id="canvasHelp">Build a linear transformation pipeline. Every node changes the same executable plan.</p>
+              <div class="flow-canvas" id="pipelineCanvas" aria-label="ETL pipeline canvas" aria-live="polite"></div>
+              <div class="flow-actions">
+                <button type="button" class="button primary" id="previewEtl">Preview changes →</button>
+                <button type="button" class="button dark" id="applyEtl" disabled>Apply &amp; save new dataset</button>
+              </div>
+            </section>
+            <section class="panel inspector-panel">
+              <div class="section-header compact"><div><span class="tiny-badge">STEP SETTINGS</span><h3>Inspector</h3></div></div>
+              <div id="noSelectedStep" class="muted-box">Select a transformation node to edit its options.</div>
+              <div id="stepEditor" hidden>
+                <label>Operation<select id="stepOperation"></select></label>
+                <label id="columnWrap">Column<select id="stepColumn"></select></label>
+                <label id="newColumnWrap" hidden>New column name<input id="stepColumnFree" type="text" maxlength="100" placeholder="new_field"></label>
+                <label id="fromWrap">Match / threshold<input type="text" id="stepFrom" maxlength="200" placeholder="Original value"></label>
+                <label id="toWrap">New value / target<input type="text" id="stepTo" maxlength="200" placeholder="New value"></label>
+                <div class="editor-actions"><button type="button" id="moveUp" class="button light">↑ Up</button><button type="button" id="moveDown" class="button light">↓ Down</button><button type="button" id="removeStep" class="button danger-soft">Remove</button></div>
+              </div>
+            </section>
+          </div>
+          <section class="panel ai-panel">
+            <div class="ai-head"><span class="ai-icon" aria-hidden="true">✳</span><div><div class="tiny-badge">ASSISTED WORKFLOW</div><h3>Tell QueryForge what you'd like to do</h3><p id="assistantInfo" class="subtext">Guided commands are available offline. Optional Ollama is local and never auto-applies changes.</p></div></div>
+            <div class="prompt-box"><textarea id="promptInput" rows="2" maxlength="800" placeholder="e.g. Trim all whitespace and remove duplicate order_id rows…" aria-label="Describe the data transformation"></textarea>
+              <div class="prompt-actions"><button type="button" class="button light" id="guidedPlan">Guided commands</button><button type="button" class="button primary" id="ollamaPlan">Ask local AI ✳</button></div>
+            </div>
+            <div class="prompt-tips">Try: <button type="button" data-prompt="trim extra spaces">Trim whitespace</button><button type="button" data-prompt="remove duplicate order_id">Remove duplicate IDs</button><button type="button" data-prompt="sort by amount">Sort values</button></div>
+            <p class="fineprint">Suggestions only update the editable plan. You must preview and explicitly approve every saved transformation.</p>
+          </section>
+          <section class="panel result-panel" id="etlResultPanel" hidden>
+            <div class="section-header"><div><span class="tiny-badge">BEFORE / AFTER</span><h3>Transformation preview</h3><p class="subtext" id="etlResultText">Review the changes before saving.</p></div></div>
+            <div class="stat-grid" id="etlStats"></div>
+            <div id="auditList" class="audit-list"></div>
+            <h3>Preview rows</h3>
+            <div class="table-scroll" id="etlTable"></div>
+          </section>
+        </div>
+      </section>
+
+      <section id="visualizeView" class="view" hidden>
+        <div id="visualizeNotice" class="workspace-info">Import a dataset to begin visualizing.</div>
+        <div id="visualizeWorkspace" hidden>
+          <div class="workspace-bar"><div><span class="tiny-badge">DATA EXPLORER</span><h2 id="visualDatasetName">Data analysis</h2><p class="subtext" id="chartDatasetMeta"></p></div><span class="flow-pill" id="chartDataStatus">Backend-calculated values</span></div>
+          <div class="analytics-layout">
+            <section class="panel chart-panel">
+              <div class="section-header compact"><div><span class="tiny-badge">BUILD A VISUAL</span><h3>Chart builder</h3></div></div>
+              <div class="chart-controls">
+                <label>Chart type<select id="chartKind"><option value="CountByCategory">Count by category</option><option value="SumByCategory">Sum by category</option><option value="Histogram">Numeric distribution</option></select></label>
+                <label>Dimension<select id="chartColumn"></select></label>
+                <label>Measure<select id="chartMeasure"></select></label>
+                <label>Top categories<select id="chartTop"><option value="5">5</option><option value="8" selected>8</option><option value="12">12</option><option value="20">20</option></select></label>
+              </div>
+              <div class="chart-options"><label><input type="checkbox" id="chartExclude" checked> Exclude quality-flagged rows</label><button type="button" class="button primary" id="renderChart">Generate chart →</button></div>
+              <div class="chart-area" id="chartArea" aria-live="polite"><div class="chart-placeholder"><span>▥</span><strong>Your chart will appear here</strong><p>Choose a dimension and generate a source-backed visualization.</p></div></div>
+              <div id="chartNotes" class="chart-notes"></div>
+              <div class="table-scroll" id="chartTable"></div>
+            </section>
+            <aside class="panel report-panel">
+              <span class="tiny-badge">DATA EVIDENCE</span><h3>Report &amp; insights</h3>
+              <p class="subtext">Calculated by C#, not invented by an AI model.</p>
+              <div class="report-content" id="reportContent">Select a dataset to generate a quality-backed summary.</div>
+              <button class="button light full" id="exportReport" type="button" disabled>Download evidence (.json)</button>
+            </aside>
+          </div>
+        </div>
+      </section>
+      <footer class="footer">QueryForge is a local development prototype. No authentication or tenant isolation. Avoid confidential data. · <a href="https://github.com/mickeymosa/QueryForge" target="_blank" rel="noopener noreferrer">GitHub repository</a></footer>
+    </main>
+  </div>
+</div>
 </body>
 </html>
