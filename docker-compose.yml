@@ -26,6 +26,8 @@ services:
         condition: service_healthy
     environment:
       ASPNETCORE_URLS: "http://+:8080"
+      LocalAi__Model: "${QUERYFORGE_OLLAMA_MODEL:-}"
+      LocalAi__ChatEndpoint: "http://host.docker.internal:11434/api/chat"
       ConnectionStrings__QueryForge: "Host=database;Port=5432;Database=queryforge;Username=queryforge;Password=local_dev_only_replace_me"
     ports:
       - "127.0.0.1:5080:8080"
