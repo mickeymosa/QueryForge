@@ -175,3 +175,12 @@ tr:hover td{background:#fafdff}
 body.easy-mode .prepare-layout{grid-template-columns:minmax(0,1.45fr) minmax(255px,.8fr)}
 body.easy-mode .inspector-panel{grid-column:auto}
 @media(max-width:800px){body.easy-mode .prepare-layout{grid-template-columns:1fr}}
+
+/* Keep wide chart tables and navigation horizontally scrollable INSIDE their panels on phones. */
+@media(max-width:570px){
+  .sidebar .nav{width:100%;min-width:0;overflow-x:auto;contain:paint}
+  .sidebar .nav-item{flex:0 0 auto}
+  .table-scroll{max-width:100%;min-width:0;overflow-x:auto;contain:paint}
+  .chart-area{max-width:100%;min-width:0;overflow-x:auto;contain:paint}
+  .chart-area svg{width:100%;min-width:0;height:auto}
+}
