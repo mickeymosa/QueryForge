@@ -219,6 +219,34 @@ jobs:
             -d '{"pipelineName":"Visual Studio ETL","steps":[{"operation":"Trim"},{"operation":"DropDuplicates","column":"order_id"}]}' \
             "http://127.0.0.1:5080/api/datasets/$STUDIO_ID/etl/preview" > /tmp/studio-preview.json
           jq -e '.rowCountAfter == 6 and .audit[1].affectedRows == 1' /tmp/studio-preview.json
+          echo 'Testing actual 2D pivot count, weighted average, invalid columns and mixed-currency refusal'
+          curl -fsS -H 'Content-Type: application/json' \
+            -d '{"rowDimension":"paid","columnDimension":"currency","aggregate":"Count","excludeFlaggedRows":false}' \
+            "http://127.0.0.1:5080/api/datasets/$STUDIO_ID/pivot/preview" > /tmp/qf-pivot-count.json
+          jq -e '.grandTotal == "7" and .includedRows == 7 and .excludedRows == 0 and
+            .columnLabels == ["EUR","GBP","USD"] and (.rows | length) == 2' /tmp/qf-pivot-count.json
+          jq -e '(.rows | map(select(.label == "true") | .total) | first) == "6"' /tmp/qf-pivot-count.json
+          jq -e '(.columnTotals | map(tonumber) | add) == 7' /tmp/qf-pivot-count.json
+          curl -fsS -H 'Content-Type: application/json' \
+            -d '{"rowDimension":"paid","aggregate":"Average","measure":"amount","excludeFlaggedRows":true}' \
+            "http://127.0.0.1:5080/api/datasets/$STUDIO_ID/pivot/preview" > /tmp/qf-pivot-avg.json
+          jq -e '.grandTotal == "175.25" and .unit == "EUR" and .includedRows == 2' /tmp/qf-pivot-avg.json
+          MIXED_PIVOT_STATUS=$(curl -sS -o /tmp/qf-pivot-mixed-error.json -w '%{http_code}' \
+            -H 'Content-Type: application/json' \
+            -d '{"rowDimension":"paid","aggregate":"Sum","measure":"amount","excludeFlaggedRows":false}' \
+            "http://127.0.0.1:5080/api/datasets/$STUDIO_ID/pivot/preview")
+          test "$MIXED_PIVOT_STATUS" -eq 400
+          jq -e '.error | contains("mixed or missing currencies")' /tmp/qf-pivot-mixed-error.json
+          BAD_PIVOT_STATUS=$(curl -sS -o /tmp/qf-pivot-column-error.json -w '%{http_code}' \
+            -H 'Content-Type: application/json' \
+            -d '{"rowDimension":"__no_such_column__","aggregate":"Count"}' \
+            "http://127.0.0.1:5080/api/datasets/$STUDIO_ID/pivot/preview")
+          test "$BAD_PIVOT_STATUS" -eq 400
+          jq -e '.error | contains("exact existing row dimension")' /tmp/qf-pivot-column-error.json
+          curl -fsS http://127.0.0.1:5080/assets/qf-pivot.js > /tmp/qf-pivot.js
+          node --check /tmp/qf-pivot.js
+          echo 'Pivot count/average, currency guard and frontend module checks passed'
+
           echo 'Creating a real OpenXML .xlsx workbook with Python stdlib (no external test dependencies)'
           python3 - <<'PY'
           from zipfile import ZipFile, ZIP_DEFLATED
