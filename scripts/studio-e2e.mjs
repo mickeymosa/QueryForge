@@ -60,8 +60,17 @@ try{
 
   await page.setViewportSize({width:390,height:844});
   await page.screenshot({path:'artifacts/studio-mobile.png',fullPage:true});
-  const bodyWidth=await page.evaluate(()=>document.documentElement.scrollWidth);
-  assert.ok(bodyWidth<=396,'Mobile page overflows width: '+bodyWidth);
+  const overflow=await page.evaluate(()=>({
+    width:document.documentElement.scrollWidth,
+    elements:[...document.querySelectorAll('body *')].map(el=>{
+      const r=el.getBoundingClientRect();
+      return {tag:el.tagName,id:el.id,cls:String(el.className||'').slice(0,70),
+        left:Math.round(r.left),right:Math.round(r.right),width:Math.round(r.width)};
+    }).filter(x=>x.right>window.innerWidth+3||x.left< -3)
+      .sort((a,b)=>b.right-a.right).slice(0,15)
+  }));
+  console.log('Mobile width diagnosis:',JSON.stringify(overflow));
+  assert.ok(overflow.width<=396,'Mobile page overflows width: '+overflow.width);
   console.log('Browser mobile viewport overflow check passed');
 
   await page.setViewportSize({width:1440,height:900});
