@@ -25,6 +25,9 @@ public sealed class StudioImportService(CsvImportService csvImport)
             throw new InvalidDataException("XLSX files for editable Studio workflows must be 2 MiB or smaller.");
 
         await using var input = file.OpenReadStream();
+        // ExcelDataReader's configuration references Windows-1252 even for OpenXML.
+        // Linux .NET containers need the provider explicitly registered.
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         using IExcelDataReader sheet = ExcelReaderFactory.CreateOpenXmlReader(input);
         if (!sheet.Read())
             throw new InvalidDataException("The first worksheet is empty; the first row must contain headers.");
