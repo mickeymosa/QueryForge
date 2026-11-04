@@ -56,7 +56,7 @@
     $('pageTitle').textContent=names[view][1]+'.';
     $('pageSubtitle').textContent=names[view][2];
     if(view==='visualize' && state.dataset && !state.large)populateChartControls();
-    window.scrollTo({top:0,behavior:'instant'});
+    window.scrollTo({top:0,behavior:'auto'});
   }
   function setMode(mode){
     state.mode=mode;
@@ -176,13 +176,22 @@
     if(file.size>25*1024*1024 || (suffix==='xlsx' && file.size>2*1024*1024)){
       notice('CSV limit: 25 MiB. Editable Excel limit: 2 MiB.',true);return;
     }
-    const large=file.size>2*1024*1024;
-    const endpoint=large?'/api/v2/datasets':'/api/studio/import';
+    let large=file.size>2*1024*1024;
+    let endpoint=large?'/api/v2/datasets':'/api/studio/import';
     const form=new FormData();form.append('file',file,file.name);
     $('chooseBtn').disabled=true;notice('Importing '+file.name+(large?' in read-only large-file mode':' for editing')+'…');
     try{
-      const response=await fetch(endpoint,{method:'POST',body:form});
+      let response=await fetch(endpoint,{method:'POST',body:form});
       let body;try{body=await response.json();}catch{body={};}
+      // A compact CSV can still have >3,000 rows or >40 columns; offer safe
+      // v2 read-only ingestion instead of pretending that editable ETL supports it.
+      if(!response.ok && !large && suffix==='csv' &&
+        /3,000 rows|1–40|2 MiB/.test(body.error||'')){
+        large=true;endpoint='/api/v2/datasets';
+        notice('CSV exceeds the editable row/column limits. Switching to safe read-only import…');
+        response=await fetch(endpoint,{method:'POST',body:form});
+        try{body=await response.json();}catch{body={};}
+      }
       if(!response.ok)throw new Error(body.error||'Import failed (HTTP '+response.status+').');
       await loadDataset(body.id,large);
       if(large)notice('Imported '+file.name+' for paged preview. ETL and charts for large files are not supported yet.');
@@ -374,7 +383,7 @@
     try{
       const req={...state.preview.request,previewFingerprint:state.preview.fingerprint};
       const saved=await post('/api/datasets/'+encodeURIComponent(state.dataset.id)+'/etl/apply',req);
-      await loadDataset(saved.id,false);go('visualize');
+      await loadDataset(saved.id,false);go('visualize');await getReport();
       notice('Created a new dataset version. Original source preserved; lineage recorded. Generate a chart from the saved result.');
     }catch(e){notice('Cannot save pipeline: '+e.message,true);$('applyEtl').disabled=false;}
   }
