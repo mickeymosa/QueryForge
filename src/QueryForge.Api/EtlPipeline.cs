@@ -24,7 +24,8 @@ public enum TransformOperation
     AddColumn,
     CopyColumn,
     SortAscending,
-    ReplaceText
+    ReplaceText,
+    KeepColumns
 }
 
 public sealed record TransformStep(
@@ -106,13 +107,13 @@ public sealed class EtlPipeline
                 throw new EtlValidationException($"Step {index + 1} has an invalid operation.");
 
             string? col = step.Column;
-            bool columnRequired = step.Operation is not TransformOperation.Trim || !string.IsNullOrWhiteSpace(col);
+            bool columnRequired = step.Operation is not (TransformOperation.Trim or TransformOperation.KeepColumns) || !string.IsNullOrWhiteSpace(col);
             if (columnRequired && step.Operation != TransformOperation.AddColumn)
             {
                 if (string.IsNullOrWhiteSpace(col) || !headers.Contains(col, StringComparer.Ordinal))
                     throw new EtlValidationException($"Step {index + 1}: select an existing, exact column name.");
             }
-            if (step.Operation is TransformOperation.FillMissing or TransformOperation.Replace or TransformOperation.RenameColumn or TransformOperation.AddColumn or TransformOperation.CopyColumn or TransformOperation.ReplaceText)
+            if (step.Operation is TransformOperation.FillMissing or TransformOperation.Replace or TransformOperation.RenameColumn or TransformOperation.AddColumn or TransformOperation.CopyColumn or TransformOperation.ReplaceText or TransformOperation.KeepColumns)
             {
                 if (step.To is null || step.To.Length > 200 ||
                     (step.To.Length == 0 && step.Operation != TransformOperation.ReplaceText))
@@ -234,6 +235,25 @@ public sealed class EtlPipeline
                         throw new EtlValidationException($"Step {index + 1}: copy target must be a unique column name.");
                     headers.Add(copyTarget);
                     foreach (var row in rows) row.Values.Add(copyTarget, row.Values[col!]);
+                    affected = rows.Count;
+                    break;
+                case TransformOperation.KeepColumns:
+                    // Preserve source header order. Reject unknown/duplicate fields rather than
+                    // silently dropping data a user wanted to retain.
+                    var keep = (step.To ?? "").Split(',', StringSplitOptions.TrimEntries |
+                        StringSplitOptions.RemoveEmptyEntries);
+                    if (keep.Length == 0 || keep.Length > headers.Count ||
+                        keep.Distinct(StringComparer.Ordinal).Count() != keep.Length ||
+                        keep.Any(h => !headers.Contains(h, StringComparer.Ordinal)))
+                        throw new EtlValidationException(
+                            $"Step {index + 1}: Keep Columns needs unique, exact existing columns separated by commas.");
+                    var keepSet = keep.ToHashSet(StringComparer.Ordinal);
+                    headers.RemoveAll(h => !keepSet.Contains(h));
+                    foreach (var row in rows)
+                    {
+                        foreach (var key in row.Values.Keys.Where(k => !keepSet.Contains(k)).ToArray())
+                            row.Values.Remove(key);
+                    }
                     affected = rows.Count;
                     break;
                 case TransformOperation.SortAscending:

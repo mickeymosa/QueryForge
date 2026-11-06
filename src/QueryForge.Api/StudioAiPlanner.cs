@@ -46,7 +46,9 @@ public sealed class StudioAiPlanner(HttpClient client, IConfiguration configurat
             Allowed operations: Trim, Uppercase, Lowercase, Replace, FillMissing,
             DropMissing, DropDuplicates, RenameColumn, FilterEquals,
             FilterContains, FilterAmountAbove, AddColumn, CopyColumn,
-            SortAscending, ReplaceText.
+            SortAscending, ReplaceText, KeepColumns.
+            For KeepColumns, put a comma-separated list of exact existing column
+            names into "to" and set "column" to null.
             Use the exact spelling/case of known input columns.
             No SQL, Python, file access, shell, network, deletes or new external data.
             When the user asks for a chart/report, do not fabricate a data result:
