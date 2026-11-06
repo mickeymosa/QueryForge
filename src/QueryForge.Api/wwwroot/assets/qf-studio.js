@@ -415,7 +415,6 @@
     place(end,pos.end.x,pos.end.y);
     function paint(){
       connections.replaceChildren();
-      let points=[{x:pos.start.x+220,y:pos.start.y+40},...state.steps.map(s=>({x:s.__x,y:s.__y,xOut:s.__x+220,yOut:s.__y+40,yIn:s.__y+40}))];
       let pairs=[];
       if(state.steps.length){
         pairs.push([{x:pos.start.x+220,y:pos.start.y+40},{x:state.steps[0].__x,y:state.steps[0].__y+40}]);
@@ -452,7 +451,7 @@
     $('columnWrap').hidden=isAdd||step.operation==='KeepColumns';
     $('newColumnWrap').hidden=!isAdd;
     $('stepColumnFree').value=isAdd?(step.column||''):'';
-    if(!isAdd && step.operation!=='Trim' && cols.length>0 && !cols.includes(step.column)){
+    if(!isAdd && step.operation!=='Trim' && step.operation!=='KeepColumns' && cols.length>0 && !cols.includes(step.column)){
       // Display missing column error during preview rather than changing a user's plan silently.
       const option=ui('option',null,'Missing: '+step.column);option.value=step.column||'';
       $('stepColumn').append(option);$('stepColumn').value=step.column;
@@ -462,9 +461,7 @@
     const to=['Replace','ReplaceText','FillMissing','RenameColumn','AddColumn','CopyColumn','KeepColumns'].includes(step.operation);
     $('fromWrap').hidden=!from;$('toWrap').hidden=!to;
     $('stepFrom').value=step.from||'';$('stepTo').value=step.to||'';
-    $('toWrap').querySelector('label')?.remove();
     $('stepTo').placeholder=step.operation==='KeepColumns'?'order_id,amount,currency':'New value';
-    $('fromWrap').querySelector('label')?.remove();
     $('moveUp').disabled=index===0;$('moveDown').disabled=index===state.steps.length-1;
   }
   function editStep(key,value){
@@ -498,7 +495,7 @@
       selected.push({operation:'Lowercase',column,from:null,to:null});
     }
     if(/keep (only )?(columns?|fields?)/.test(text)){
-      const matched=cols.filter(c=>new RegExp('(^|[^\\w])'+c.replace(/[.*+?^${}()|[\\]\\]/g,'\\    if(!selected.length)throw new Error('Guided commands currently support trim, remove duplicates, remove missing, sort and text case. For richer language, configure Ollama.');')+'(?=$|[^\\w])','i').test(text));
+      const matched=cols.filter(c=>text.includes(c.toLowerCase()));
       if(!matched.length)throw new Error('Name exact columns to keep, e.g. "keep columns order_id, amount".');
       selected.push({operation:'KeepColumns',column:null,from:null,to:matched.join(',')});
     }
