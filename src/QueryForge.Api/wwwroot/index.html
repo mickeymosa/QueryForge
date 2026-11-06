@@ -101,17 +101,19 @@
           <div class="prepare-layout">
             <section class="panel tool-panel" id="toolPanel">
               <div class="section-header compact"><div><span class="tiny-badge">BUILD YOUR FLOW</span><h3>Operations</h3></div></div>
-              <p class="subtext">Click to add a step. In Advanced Mode, drag it onto the workflow.</p>
+              <p class="subtext">Click or drag a transformation onto the canvas. Keep Columns and filtering operate on your actual dataset.</p>
               <div class="tool-search"><input id="operationSearch" type="search" placeholder="Search transformations…" aria-label="Search ETL operations"></div>
               <div class="tool-list" id="operationPalette"></div>
             </section>
             <section class="panel canvas-panel">
               <div class="section-header compact"><div><span class="tiny-badge">VISUAL FLOW</span><h3>Pipeline designer</h3></div><div class="flow-pill" id="stepCount">0 steps</div></div>
-              <p class="subtext" id="canvasHelp">Build a linear transformation pipeline. Every node changes the same executable plan.</p>
+              <p class="subtext" id="canvasHelp">Place nodes anywhere; their connections determine the real transformation order.</p>
+              <div class="graph-instructions"><strong>How this works</strong> Drag the ⠿ grip to move a node freely. Click an output circle → then an input circle to reconnect the execution order. One connected path is supported; joins and branches are not yet executable.</div>
               <div class="flow-canvas" id="pipelineCanvas" aria-label="ETL pipeline canvas" aria-live="polite"></div>
               <div class="flow-actions">
                 <button type="button" class="button primary" id="previewEtl">Preview changes →</button>
                 <button type="button" class="button dark" id="applyEtl" disabled>Apply &amp; save new dataset</button>
+                <button type="button" class="button outline" id="exportCsv" disabled>Export selected dataset (.csv)</button>
               </div>
             </section>
             <section class="panel inspector-panel">

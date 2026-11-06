@@ -249,3 +249,23 @@ table.pivot-matrix{border-collapse:separate;border-spacing:0;min-width:550px;max
  .pivot-visual-head label{max-width:100%;width:100%}
  .pivot-visual-head select{width:100%}
 }
+
+/* v0.9: Free-positioned, explicit single-path ETL graph. */
+.graph-instructions{background:#e9f7f4;color:#325e5b;padding:12px 14px;border-radius:10px;font-size:.78rem;line-height:1.55;margin:12px 0}
+.graph-viewport.flow-canvas{display:block;padding:0;overflow:auto;min-height:570px;max-height:650px;overscroll-behavior:contain;touch-action:pan-x pan-y}
+.graph-board{position:relative;min-width:960px;background:radial-gradient(#d7e5e9 1px,transparent 1px) 0 0/21px 21px,#f9fcfd;isolation:isolate}
+.graph-lines{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
+.graph-board .graph-card{position:absolute;box-sizing:border-box;width:220px;min-width:220px;max-width:none;min-height:80px;display:flex;align-items:center;gap:7px;z-index:1;box-shadow:0 6px 24px #102e4720;border-radius:12px;padding:11px 14px}
+.graph-board .flow-end{background:#f5f8ff;border:1px dashed #7a94af;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:3px}
+.graph-board .flow-source{background:#e8f8f3;border-color:#a5dac9}
+.graph-board .flow-node .node-text,.graph-board .flow-source .node-text{flex:1;min-width:0}
+.graph-board .graph-card small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:160px}
+.graph-board .graph-port{position:absolute;z-index:2;top:29px;border-radius:50%;width:25px;height:25px;border:2px solid #169c91;background:white;color:#147d75;display:grid;place-items:center;padding:0;line-height:1;cursor:crosshair;box-shadow:0 2px 7px #132b3b22}
+.graph-board .graph-port-in{left:-13px}.graph-board .graph-port-out{right:-13px}
+.graph-board .graph-port:focus-visible{outline:3px solid #f6a832;outline-offset:3px}
+.graph-board .node-move{color:#59958f;font-size:23px;cursor:move;touch-action:none;padding:5px;border-radius:6px;user-select:none}
+.graph-board .node-move:hover{background:#dbf5ed}
+.graph-board .flow-node{cursor:pointer}
+.graph-board .flow-node.is-selected{border:2px solid #10a08d}
+body.easy-mode .graph-board .node-move{opacity:.4;cursor:default}
+@media(max-width:800px){.graph-viewport.flow-canvas{max-height:580px}.graph-instructions{font-size:.76rem}}

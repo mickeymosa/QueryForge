@@ -10,12 +10,12 @@
     ['Uppercase','Uppercase text','A'],['Lowercase','Lowercase text','a'],
     ['Replace','Replace exact values','⇄'],['ReplaceText','Replace text','⇄'],
     ['RenameColumn','Rename column','✎'],['AddColumn','Add constant column','＋'],
-    ['CopyColumn','Copy column','⧉']
+    ['CopyColumn','Copy column','⧉'],['KeepColumns','Keep columns','▦']
   ];
   const labelFor = op => OPS.find(x => x[0] === op)?.[1] || op;
   const state = {
     view:'data',mode:'easy',dataset:null,large:false,steps:[],selected:-1,
-    preview:null,previewData:null,aiAvailable:false,latestChart:null,report:null
+    preview:null,previewData:null,aiAvailable:false,latestChart:null,report:null,pendingLink:null,draggedNode:null
   };
   const ui = (tag,cls,text) => {
     const e=document.createElement(tag);
@@ -70,6 +70,30 @@
       ? 'Use the guided assistant to build a step-by-step plan. Select any node to adjust its settings.'
       : 'Drag operations from the library, reorder nodes, then preview before applying.';
     renderCanvas();
+  }
+  const draftKey=()=>state.dataset?'queryforge:v0.9:draft:'+state.dataset.id:null;
+  function persistDraft(){
+    try{
+      const key=draftKey();
+      if(key)localStorage.setItem(key,JSON.stringify({
+        version:1,steps:state.steps,pipelineName:$('pipelineName').value
+      }));
+    }catch{notice('Browser storage unavailable. Your unsaved workflow will not survive a page reload.',true);}
+  }
+  function restoreDraft(){
+    try{
+      const stored=localStorage.getItem(draftKey());
+      if(!stored)return;
+      const d=JSON.parse(stored);
+      if(d.version!==1||!Array.isArray(d.steps)||d.steps.length>MAX_STEPS ||
+        !d.steps.every(s=>s&&OPS.some(op=>op[0]===s.operation)))return;
+      state.steps=d.steps.map((s,i)=>({
+        ...s,__id:String(s.__id||'n'+i),__x:Number.isFinite(s.__x)?s.__x:null,
+        __y:Number.isFinite(s.__y)?s.__y:null
+      }));
+      $('pipelineName').value=String(d.pipelineName||'My clean dataset').slice(0,80);
+      notice('Restored your unsaved ETL workflow for this dataset.');
+    }catch{notice('Could not restore this browser draft. Your source data was not modified.',true);}
   }
   function table(container,headers,rows){
     container.replaceChildren();
@@ -137,6 +161,7 @@
       $('visualizeNotice').textContent='Large CSV analytics is not connected yet. Use a 2 MiB-or-smaller editable dataset for charts.';
     }
     renderQuality();
+    $('exportCsv').disabled=state.large;
     renderCanvas();renderEditor();
     if(!state.large)populateChartControls();
     // Other Studio modules receive the current, server-loaded dataset metadata.
@@ -152,7 +177,8 @@
       const d=await json(endpoint+encodeURIComponent(id));
       const preview=await json(endpoint+encodeURIComponent(id)+(large?'/rows?offset=0&limit=20':'/preview?limit=20'));
       state.dataset={...d,quality:d.quality||null};state.large=large;
-      state.steps=[];state.selected=-1;state.preview=null;state.previewData=null;state.report=null;state.latestChart=null;
+      state.steps=[];state.selected=-1;state.preview=null;state.previewData=null;state.report=null;state.latestChart=null;state.pendingLink=null;
+      restoreDraft();
       $('etlResultPanel').hidden=true;$('applyEtl').disabled=true;
       $('reportContent').textContent='Generate a chart or review the dataset report.';
       $('exportReport').disabled=true;
@@ -221,18 +247,22 @@
     const id=cols.find(c=>['order_id','invoice_id','id'].includes(c.toLowerCase()));
     let column=op==='Trim'?null:(op==='DropDuplicates' && id?id:(cols[0]||null));
     if(op==='AddColumn')column='new_field';
-    const to=['FillMissing','Replace','ReplaceText','AddColumn','RenameColumn','CopyColumn'].includes(op)
-      ? (op==='AddColumn'?'value':op==='RenameColumn'?'renamed_field':op==='CopyColumn'?'copied_field':'') : null;
+    if(op==='KeepColumns')column=null;
+    const to=['FillMissing','Replace','ReplaceText','AddColumn','RenameColumn','CopyColumn','KeepColumns'].includes(op)
+      ? (op==='AddColumn'?'value':op==='RenameColumn'?'renamed_field':op==='CopyColumn'?'copied_field':op==='KeepColumns'?cols.join(','):') : null;
     return {operation:op,column,from:null,to};
   }
   function invalidate(){
     state.preview=null;state.previewData=null;
     $('applyEtl').disabled=true;$('etlResultPanel').hidden=true;
+    persistDraft();
   }
   function addOperation(op,at=state.steps.length){
     if(state.large||!state.dataset){notice('Load an editable dataset first.',true);return;}
     if(!OPS.some(x=>x[0]===op) || state.steps.length>=MAX_STEPS){notice('Maximum 12 supported transformation steps.',true);return;}
-    state.steps.splice(at,0,makeStep(op));state.selected=at;invalidate();
+    const added=makeStep(op);added.__id='node-'+Date.now()+'-'+Math.random().toString(36).slice(2,8);
+    if(state.dropPosition){added.__x=state.dropPosition.x;added.__y=state.dropPosition.y;state.dropPosition=null;}
+    state.steps.splice(at,0,added);state.selected=at;invalidate();
     renderCanvas();renderEditor();notice('Added '+labelFor(op)+'. Configure it and preview the complete plan.');
   }
   function renderPalette(){
@@ -254,37 +284,159 @@
   function insertDrop(event,at){
     event.preventDefault();
     const raw=event.dataTransfer.getData('text/plain');
-    if(raw.startsWith('op:'))addOperation(raw.slice(3),at);
+    if(raw.startsWith('op:')){
+      const board=$('graphBoard');if(board && event.target.closest('#graphBoard')){
+        const rect=board.getBoundingClientRect();state.dropPosition={x:Math.max(20,event.clientX-rect.left-100),y:Math.max(20,event.clientY-rect.top-45)};
+      }
+      addOperation(raw.slice(3),at);
+    }
     else if(raw.startsWith('step:')){
       const from=Number(raw.slice(5));
       moveStep(from,from<at?at-1:at);
     }
   }
+
+  function graphPositions(){
+    const steps=state.steps;
+    steps.forEach((step,index)=>{
+      if(!step.__id)step.__id='node-'+index;
+      const col=Math.floor(index/3),row=index%3;
+      if(!Number.isFinite(step.__x))step.__x=270+col*260;
+      if(!Number.isFinite(step.__y))step.__y=55+row*150;
+    });
+    const endX=steps.length?Math.max(660,...steps.map(s=>s.__x+255)):425;
+    return {start:{x:25,y:205},end:{x:endX,y:205}};
+  }
+  function connectAfter(sourceId,targetId){
+    const steps=state.steps;
+    const source=steps.findIndex(s=>s.__id===sourceId),target=steps.findIndex(s=>s.__id===targetId);
+    if(sourceId!=='source' && source===-1)return notice('Connection source not found.',true);
+    if(targetId!=='end' && target===-1)return notice('Connection target not found.',true);
+    if(sourceId===targetId)return notice('A node cannot connect to itself.',true);
+    if(targetId==='end' && sourceId==='source' && steps.length)return notice('Connect each transformation before the output.',true);
+    if(targetId==='end' && source>=0)moveStep(source,steps.length-1);
+    else if(sourceId==='source' && target>=0)moveStep(target,0);
+    else if(source>=0 && target>=0){
+      // Preserve one executable path; this editor does not pretend to support joins.
+      const moving=steps[target];
+      steps.splice(target,1);
+      const after=steps.findIndex(s=>s.__id===sourceId);
+      steps.splice(after+1,0,moving);
+      state.selected=steps.indexOf(moving);
+      invalidate();renderCanvas();renderEditor();
+    }
+    notice('Connection updated. Nodes execute in the connected path order. Preview to validate.');
+  }
+  function connectionPort(kind,nodeId){
+    const button=ui('button','graph-port graph-port-'+kind,kind==='out'?'→':'←');
+    button.type='button';button.title=kind==='out'?'Connect output to another node input':'Connect from the selected output';
+    button.setAttribute('aria-label',button.title+' '+nodeId);
+    button.addEventListener('click',e=>{
+      e.stopPropagation();
+      if(kind==='out'){
+        state.pendingLink=nodeId;renderCanvas();
+        notice('Connection started. Click the input (left circle) on the next node.');
+      }else if(state.pendingLink){
+        const from=state.pendingLink;state.pendingLink=null;connectAfter(from,nodeId);
+        renderCanvas();
+      }else notice('Choose an output (right circle) first.',true);
+    });
+    return button;
+  }
   function renderCanvas(){
     const canvas=$('pipelineCanvas');canvas.replaceChildren();
     $('stepCount').textContent=state.steps.length+' / '+MAX_STEPS+' steps';
-    const start=ui('div','flow-source');start.append(ui('span','node-index','▦'));
-    const startText=ui('span');startText.append(ui('strong',null,state.dataset?.fileName||'CSV / Excel source'),ui('small',null,'Validated source dataset'));
-    start.append(startText);canvas.append(start);
-    if(!state.steps.length)canvas.append(ui('div','flow-empty',state.mode==='easy'
-      ? 'Describe a change below or use a suggested command.'
-      : 'Drag an operation from the left into this area.'));
+    canvas.classList.add('graph-viewport');
+    const pos=graphPositions();
+    const board=ui('div','graph-board');board.id='graphBoard';
+    const boardWidth=Math.max(960,pos.end.x+265);
+    board.style.width=boardWidth+'px';board.style.height='570px';
+    const connections=document.createElementNS('http://www.w3.org/2000/svg','svg');
+    connections.setAttribute('class','graph-lines');
+    connections.setAttribute('viewBox','0 0 '+boardWidth+' 570');
+    connections.setAttribute('aria-hidden','true');
+    board.append(connections);
+    function place(el,x,y){el.style.left=x+'px';el.style.top=y+'px';board.append(el);}
+    const source=ui('div','flow-source graph-card');
+    source.append(ui('span','node-index','▦'));
+    const sourceText=ui('span','node-text');
+    sourceText.append(ui('strong',null,'Input dataset'),ui('small',null,state.dataset?.fileName||'CSV / Excel'));
+    source.append(sourceText,connectionPort('out','source'));
+    place(source,pos.start.x,pos.start.y);
     state.steps.forEach((step,index)=>{
-      canvas.append(ui('span','flow-connector'));
-      const card=ui('button','flow-node'+(index===state.selected?' is-selected':''));
-      card.type='button';card.draggable=state.mode==='advanced';card.dataset.index=String(index);
-      card.append(ui('span','node-index',String(index+1).padStart(2,'0')));
+      const card=ui('div','flow-node graph-card'+(index===state.selected?' is-selected':''));
+      card.draggable=state.mode==='advanced';card.dataset.index=String(index);
+      card.tabIndex=0;card.setAttribute('role','button');
+      card.setAttribute('aria-label','Step '+(index+1)+' '+labelFor(step.operation)+'. Select to edit.');
+      card.append(connectionPort('in',step.__id),ui('span','node-index',String(index+1).padStart(2,'0')));
       const info=ui('span','node-text');info.append(ui('strong',null,labelFor(step.operation)));
       const extra=[step.column,step.from,step.to].filter(x=>x!==null&&x!=='').join(' · ');
-      info.append(ui('small',null,extra||'All columns / no settings'));card.append(info,ui('span','node-handle','⠿'));
-      card.addEventListener('click',()=>{state.selected=index;renderCanvas();renderEditor();});
-      card.addEventListener('dragstart',event=>{event.dataTransfer.setData('text/plain','step:'+index);event.dataTransfer.effectAllowed='move';});
-      card.addEventListener('dragover',event=>event.preventDefault());
-      card.addEventListener('drop',event=>{event.stopPropagation();insertDrop(event,index);});
-      canvas.append(card);
+      info.append(ui('small',null,extra||'Select to configure'));card.append(info);
+      const grip=ui('span','node-move','⠿');grip.title='Drag to position node on canvas';
+      card.append(grip,connectionPort('out',step.__id));
+      card.addEventListener('click',e=>{
+        if(e.target.closest('.graph-port'))return;
+        state.selected=state.steps.indexOf(step);renderCanvas();renderEditor();
+      });
+      card.addEventListener('keydown',e=>{
+        if(e.target!==card)return;
+        if(e.key==='Enter'||e.key===' '){e.preventDefault();state.selected=state.steps.indexOf(step);renderCanvas();renderEditor();}
+      });
+      card.addEventListener('dragstart',e=>{
+        if(state.mode!=='advanced'){e.preventDefault();return;}
+        e.dataTransfer.setData('text/plain','step:'+state.steps.indexOf(step));
+        e.dataTransfer.effectAllowed='move';
+      });
+      card.addEventListener('dragover',e=>e.preventDefault());
+      card.addEventListener('drop',e=>{e.stopPropagation();insertDrop(e,state.steps.indexOf(step));});
+      // Dedicated grip makes free positioning independent of HTML5 step reordering.
+      grip.addEventListener('pointerdown',e=>{
+        if(e.button!==0||state.mode!=='advanced')return;
+        e.preventDefault();e.stopPropagation();
+        grip.setPointerCapture(e.pointerId);
+        const initial={clientX:e.clientX,clientY:e.clientY,x:step.__x,y:step.__y};
+        function move(evt){
+          const x=Math.max(5,Math.min(boardWidth-230,initial.x+evt.clientX-initial.clientX));
+          const y=Math.max(5,Math.min(470,initial.y+evt.clientY-initial.clientY));
+          step.__x=x;step.__y=y;card.style.left=x+'px';card.style.top=y+'px';
+          paint();
+        }
+        function done(){grip.removeEventListener('pointermove',move);grip.removeEventListener('pointerup',done);grip.removeEventListener('pointercancel',done);persistDraft();}
+        grip.addEventListener('pointermove',move);
+        grip.addEventListener('pointerup',done);
+        grip.addEventListener('pointercancel',done);
+      });
+      place(card,step.__x,step.__y);
     });
-    canvas.append(ui('span','flow-connector'));
-    const end=ui('div','flow-end');end.append(ui('strong',null,'Preview → Approve → New version'),ui('small',null,'Original source is preserved'));canvas.append(end);
+    const end=ui('div','flow-end graph-card');
+    end.append(connectionPort('in','end'),ui('strong',null,'Output dataset'),ui('small',null,'Preview → Approve → Export'));
+    end.addEventListener('dragover',e=>e.preventDefault());
+    end.addEventListener('drop',e=>{e.stopPropagation();insertDrop(e,state.steps.length);});
+    place(end,pos.end.x,pos.end.y);
+    function paint(){
+      connections.replaceChildren();
+      let points=[{x:pos.start.x+220,y:pos.start.y+40},...state.steps.map(s=>({x:s.__x,y:s.__y,xOut:s.__x+220,yOut:s.__y+40,yIn:s.__y+40}))];
+      let pairs=[];
+      if(state.steps.length){
+        pairs.push([{x:pos.start.x+220,y:pos.start.y+40},{x:state.steps[0].__x,y:state.steps[0].__y+40}]);
+        for(let i=0;i<state.steps.length-1;i++)
+          pairs.push([{x:state.steps[i].__x+220,y:state.steps[i].__y+40},{x:state.steps[i+1].__x,y:state.steps[i+1].__y+40}]);
+        const last=state.steps.at(-1);pairs.push([{x:last.__x+220,y:last.__y+40},{x:pos.end.x,y:pos.end.y+40}]);
+      }else pairs.push([{x:pos.start.x+220,y:pos.start.y+40},{x:pos.end.x,y:pos.end.y+40}]);
+      for(const [a,b] of pairs){
+        const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+        const bend=Math.max(55,Math.abs(b.x-a.x)/2);
+        path.setAttribute('d','M '+a.x+' '+a.y+' C '+(a.x+bend)+' '+a.y+', '+(b.x-bend)+' '+b.y+', '+b.x+' '+b.y);
+        path.setAttribute('stroke','#169c91');
+        path.setAttribute('stroke-width','2.6');path.setAttribute('fill','none');
+        path.setAttribute('marker-end','url(#qf-arrow)');
+        connections.append(path);
+      }
+      let defs=connections.querySelector('defs');
+      if(!defs){defs=document.createElementNS('http://www.w3.org/2000/svg','defs');connections.prepend(defs);}
+      defs.innerHTML='<marker id="qf-arrow" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0 0 L7 3 L0 6 Z" fill="#169c91"/></marker>';
+    }
+    canvas.append(board);paint();
   }
   function renderEditor(){
     const index=state.selected,step=state.steps[index];
@@ -297,7 +449,7 @@
     const cols=inferHeaders(index);
     fillSelect($('stepColumn'),cols,step.column,step.operation==='Trim');
     const isAdd=step.operation==='AddColumn',needsCol=step.operation!=='Trim';
-    $('columnWrap').hidden=isAdd;
+    $('columnWrap').hidden=isAdd||step.operation==='KeepColumns';
     $('newColumnWrap').hidden=!isAdd;
     $('stepColumnFree').value=isAdd?(step.column||''):'';
     if(!isAdd && step.operation!=='Trim' && cols.length>0 && !cols.includes(step.column)){
@@ -307,9 +459,11 @@
     }
     if(step.operation==='Trim')$('columnWrap').hidden=false;
     const from=['Replace','ReplaceText','FilterEquals','FilterContains','FilterAmountAbove'].includes(step.operation);
-    const to=['Replace','ReplaceText','FillMissing','RenameColumn','AddColumn','CopyColumn'].includes(step.operation);
+    const to=['Replace','ReplaceText','FillMissing','RenameColumn','AddColumn','CopyColumn','KeepColumns'].includes(step.operation);
     $('fromWrap').hidden=!from;$('toWrap').hidden=!to;
     $('stepFrom').value=step.from||'';$('stepTo').value=step.to||'';
+    $('toWrap').querySelector('label')?.remove();
+    $('stepTo').placeholder=step.operation==='KeepColumns'?'order_id,amount,currency':'New value';
     $('fromWrap').querySelector('label')?.remove();
     $('moveUp').disabled=index===0;$('moveDown').disabled=index===state.steps.length-1;
   }
@@ -343,7 +497,12 @@
       if(!column)throw new Error('To lowercase, specify the exact column name.');
       selected.push({operation:'Lowercase',column,from:null,to:null});
     }
-    if(!selected.length)throw new Error('Guided commands currently support trim, remove duplicates, remove missing, sort and text case. For richer language, configure Ollama.');
+    if(/keep (only )?(columns?|fields?)/.test(text)){
+      const matched=cols.filter(c=>new RegExp('(^|[^\\w])'+c.replace(/[.*+?^${}()|[\\]\\]/g,'\\    if(!selected.length)throw new Error('Guided commands currently support trim, remove duplicates, remove missing, sort and text case. For richer language, configure Ollama.');')+'(?=$|[^\\w])','i').test(text));
+      if(!matched.length)throw new Error('Name exact columns to keep, e.g. "keep columns order_id, amount".');
+      selected.push({operation:'KeepColumns',column:null,from:null,to:matched.join(',')});
+    }
+    if(!selected.length)throw new Error('Guided commands support trim, duplicates, missing, sort, text case, and keep columns. For more, use the visual operations or configure an LLM.');
     return selected;
   }
   function applySuggestions(steps,origin){
@@ -495,6 +654,7 @@
       if(state.mode==='advanced')insertDrop(e,state.steps.length);
     });
     $('clearSteps').addEventListener('click',()=>{state.steps=[];state.selected=-1;invalidate();renderCanvas();renderEditor();notice('Unsaved pipeline steps cleared. Stored data was not affected.');});
+    $('exportCsv').addEventListener('click',()=>{if(state.dataset&&!state.large)window.location.assign('/api/datasets/'+encodeURIComponent(state.dataset.id)+'/export.csv');});
     $('stepOperation').addEventListener('change',e=>{
       const replacement=makeStep(e.target.value);state.steps[state.selected]=replacement;
       invalidate();renderCanvas();renderEditor();
