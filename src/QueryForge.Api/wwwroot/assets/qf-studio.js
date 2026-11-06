@@ -249,7 +249,7 @@
     if(op==='AddColumn')column='new_field';
     if(op==='KeepColumns')column=null;
     const to=['FillMissing','Replace','ReplaceText','AddColumn','RenameColumn','CopyColumn','KeepColumns'].includes(op)
-      ? (op==='AddColumn'?'value':op==='RenameColumn'?'renamed_field':op==='CopyColumn'?'copied_field':op==='KeepColumns'?cols.join(','):') : null;
+      ? (op==='AddColumn'?'value':op==='RenameColumn'?'renamed_field':op==='CopyColumn'?'copied_field':op==='KeepColumns'?cols.join(','):'') : null;
     return {operation:op,column,from:null,to};
   }
   function invalidate(){
