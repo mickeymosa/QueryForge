@@ -123,7 +123,64 @@ try{
   assert.match(await page.locator('#dataDescription').innerText(),/2 rows/);
   console.log('Browser XLSX import and quality preview passed');
 
+  // v0.9: the free-position visual canvas is not just a picture:
+  // node settings, explicit connections, server preview and export are exercised.
+  const sourceId=(await page.locator('#dataDescription').innerText())
+    .match(/[0-9a-f]{8}-[0-9a-f-]{27,36}/i)?.[0];
+  assert.ok(sourceId,'Imported editable dataset must have a visible identifier');
+  await page.locator('[data-view="prepare"]').click();
+  await page.locator('#advancedMode').click();
+  await page.locator('.tool-item').filter({hasText:'Trim whitespace'}).click();
+  await page.locator('.tool-item').filter({hasText:'Keep columns'}).click();
+  assert.equal(await page.locator('.flow-node').count(),2);
+  assert.equal(await page.locator('#stepOperation').inputValue(),'KeepColumns');
+  await page.locator('#stepTo').fill('order_id,amount');
+  const originalLeft=await page.locator('.flow-node').last().evaluate(el=>parseFloat(el.style.left));
+  const grip=page.locator('.flow-node').last().locator('.node-move');
+  const box=await grip.boundingBox();
+  assert.ok(box,'Move handle must be visible');
+  await page.mouse.move(box.x+box.width/2,box.y+box.height/2);
+  await page.mouse.down();
+  await page.mouse.move(box.x+box.width/2+45,box.y+box.height/2+25,{steps:6});
+  await page.mouse.up();
+  const movedLeft=await page.locator('.flow-node').last().evaluate(el=>parseFloat(el.style.left));
+  assert.ok(movedLeft>originalLeft+20,'Node grip must freely reposition the real node');
+
+  // Reconnect source to the second node: it becomes the first executable step.
+  await page.locator('.flow-source .graph-port-out').click();
+  await page.locator('.flow-node').nth(1).locator('.graph-port-in').click();
+  assert.match(await page.locator('.flow-node').first().innerText(),/Keep columns/);
+  // Reconnect again to restore Trim -> KeepColumns, preserving the chosen fields.
+  await page.locator('.flow-source .graph-port-out').click();
+  await page.locator('.flow-node').nth(1).locator('.graph-port-in').click();
+  assert.match(await page.locator('.flow-node').first().innerText(),/Trim whitespace/);
+  await page.screenshot({path:'artifacts/studio-v09-nodes.png',fullPage:true});
+  console.log('Browser free-position node movement and connection-based ETL order passed');
+
+  // Saved draft restores in the same browser after a reload and dataset re-selection.
+  await page.goto(base+'/?dataset='+sourceId,{waitUntil:'networkidle'});
+  await page.locator('#dataDetails:not([hidden])').waitFor();
+  await page.locator('[data-view="prepare"]').click();
+  assert.equal(await page.locator('.flow-node').count(),2,'ETL draft should survive reload');
+  await page.locator('#previewEtl').click();
+  await page.locator('#etlResultPanel:not([hidden])').waitFor();
+  assert.equal(await page.locator('.audit-row').count(),2);
+  assert.equal(await page.locator('#etlTable thead th').count(),2);
+  await page.locator('#applyEtl').click();
+  await page.locator('#visualizeView:not([hidden])').waitFor();
+  await page.locator('[data-view="prepare"]').click();
+  const [csvDownload]=await Promise.all([
+    page.waitForEvent('download'),
+    page.locator('#exportCsv').click()
+  ]);
+  const csvText=await readFile(await csvDownload.path(),'utf8');
+  assert.ok(csvText.includes('"order_id","amount"'));
+  assert.ok(!csvText.includes('"currency"'));
+  console.log('Browser KeepColumns, derived dataset, persisted draft and CSV download passed');
+
+
   // A purpose-made sales fixture proves 2D monetary pivot accuracy and linked charts.
+  await page.locator('[data-view="data"]').click();
   await page.locator('#pivotSampleBtn').click();
   await page.waitForFunction(()=>
     document.getElementById('dataHeading')?.textContent==='pivot-sales.csv');

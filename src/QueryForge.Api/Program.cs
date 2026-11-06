@@ -156,6 +156,7 @@ app.MapGet("/api/datasets/{id:guid}/metrics", async (
 
 // ETL is optional; users must preview an explicit, allowlisted transformation plan.
 app.MapEtlEndpoints();
+app.MapDatasetCsvExportEndpoints();
 app.MapAnalyticsEndpoints();
 app.MapPivotEndpoints();
 app.MapAdvisoryWorkflowEndpoints();

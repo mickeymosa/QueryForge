@@ -2,6 +2,8 @@
 
 **An open-source, local-first data preparation and analytics workspace built with ASP.NET Core, PostgreSQL and DuckDB.**
 
+> **v0.9 draft (feature branch):** freely movable visual ETL nodes connected in a real **single executable sequence**, deterministic Keep Columns transformation, CSV export, browser-local unsaved workflow drafts and optional server-side OpenAI API or local Ollama planning. See [v0.9 usage and setup](docs/product/reliable-node-studio-v0.9.md). This is a local, single-user developer prototype, not production software.
+
 > **Current status: v0.8 development prototype, draft PR #30, NOT production-ready.**
 > The current working application code is on stacked feature branches, **not** on `main`. The project is designed to run privately on your Windows/Mac/Linux workstation through Docker—not as a paid hosted service.
 
@@ -10,6 +12,11 @@
 | Feature | Actual capability |
 | --- | --- |
 | Modern unified Studio UI | Source upload, quality overview, prepare, visualize and evidence report in one page |
+| Free-position ETL node workspace | Drag nodes anywhere; connect output → input to change executable **single-path order**, no joins or branches |
+| Keep Columns | Keep explicit fields using a deterministic, tested transformation |
+| CSV export | Download the selected small/derived dataset with spreadsheet-formula escaping |
+| Draft restore | Workflow steps and canvas positions persist in local browser storage |
+| Hosted AI option | Optional server-side OpenAI API connector, with no raw source rows sent and mandatory manual approval |
 | CSV edit and validation | <=2 MiB, <=3,000 rows, <=40 columns; existing deterministic C# quality checks |
 | Excel `.xlsx` import | First sheet, first row as column names, converted to bounded CSV; same editable limits |
 | Large CSV import | <=25 MiB, <=30,000 rows, <=80 columns; **read-only paged preview**, no v2 ETL/charts yet |
@@ -64,7 +71,7 @@ Don't use `docker compose down -v` unless you intentionally want to delete your 
 
 For XLSX, save a workbook with a first row of unique headers and a few synthetic data rows; upload it the same way as CSV. Do not test with confidential workbook data.
 
-## Offline natural-language helper vs. AI
+## Offline guided commands and optional local/hosted AI
 
 **Guided commands** supports a small deterministic vocabulary for trim, deduplication, missing rows, sort and uppercase/lowercase. It is not an LLM.
 
@@ -76,7 +83,7 @@ $env:QUERYFORGE_OLLAMA_MODEL="llama3.2"
 docker compose up --build -d
 ```
 
-The API talks to the Docker host through `host.docker.internal:11434`; Ollama must be reachable from the API container on that address. No remote AI service is configured by default. The prompt and source column names (not dataset rows) are sent to the locally configured model. AI proposals are checked by the C# ETL engine and **never apply automatically**. If Ollama isn't available, use Guided commands instead.
+The API talks to the Docker host through `host.docker.internal:11434`; Ollama must be reachable from the API container on that address. No remote AI service is configured by default. For a hosted OpenAI API, see the v0.9 guide; it uses a backend-only key and sends only prompts/column metadata, not dataset rows. The prompt and source column names (not dataset rows) are sent to the locally configured model. AI proposals are checked by the C# ETL engine and **never apply automatically**. If Ollama isn't available, use Guided commands instead.
 
 ## Architecture and tests
 
