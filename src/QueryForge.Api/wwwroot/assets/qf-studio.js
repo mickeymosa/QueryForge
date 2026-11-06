@@ -683,13 +683,13 @@
     });
     $('ollamaPlan').addEventListener('click',async()=>{
       if(!state.dataset||state.large){notice('Import an editable dataset first.',true);return;}
-      $('ollamaPlan').disabled=true;notice('Asking your local Ollama model for a validated plan…');
+      $('ollamaPlan').disabled=true;notice('Asking the configured AI model for a validated transformation plan…');
       try{
         const plan=await post('/api/studio/assistant/plan',{
           datasetId:state.dataset.id,prompt:$('promptInput').value.trim()
         });
-        applySuggestions(plan.steps,'Ollama AI');
-      }catch(e){notice('Local AI: '+e.message,true);}
+        applySuggestions(plan.steps,'AI');
+      }catch(e){notice('AI: '+e.message,true);}
       finally{$('ollamaPlan').disabled=false;}
     });
     $('chartKind').addEventListener('change',()=>{$('chartMeasure').disabled=$('chartKind').value!=='SumByCategory';});
@@ -702,8 +702,11 @@
       const ai=await json('/api/studio/assistant/status');
       state.aiAvailable=ai.configured;
       $('assistantInfo').textContent=ai.configured
-        ? 'Ollama is configured. Ask local AI to propose steps, or use offline guided commands. No automatic changes.'
-        : 'Offline guided commands work now. Optional Ollama AI requires a local model and explicit configuration.';
+        ? (ai.mode==='hosted-openai'?
+            'Hosted OpenAI configured. Only your request and column names leave this machine; never raw rows. Review suggestions before applying.' :
+            'Local Ollama configured. Proposals are validated before preview. No automatic changes.')
+        : 'Offline guided commands work without AI. Optional Ollama or hosted OpenAI can be configured on your computer.';
+      $('ollamaPlan').textContent=ai.mode==='hosted-openai'?'Ask hosted AI ✳':'Ask local AI ✳';
       $('ollamaPlan').disabled=!ai.configured;
     }catch{$('ollamaPlan').disabled=true;}
     const id=new URLSearchParams(location.search).get('dataset');
