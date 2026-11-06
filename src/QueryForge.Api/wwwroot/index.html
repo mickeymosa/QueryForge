@@ -49,7 +49,7 @@
           <h1 id="pageTitle">Start with your data<span class="accent">.</span></h1>
           <p id="pageSubtitle">Import a file, inspect data quality, and prepare it for analysis—without leaving this workspace.</p>
         </div>
-        <div class="heading-actions"><span class="small-tag">v0.7 · Local prototype</span></div>
+        <div class="heading-actions"><span class="small-tag">v0.9 · Local prototype</span></div>
       </section>
 
       <section id="dataView" class="view">
@@ -82,7 +82,7 @@
           </section>
         </div>
         <section class="panel dataset-panel" id="dataDetails" hidden>
-          <div class="section-header"><div><span class="tiny-badge">DATASET OVERVIEW</span><h2 id="dataHeading">Selected dataset</h2><p id="dataDescription" class="subtext"></p></div><button class="button primary" id="toPrepare" type="button">Prepare dataset →</button></div>
+          <div class="section-header"><div><span class="tiny-badge">DATASET OVERVIEW</span><h2 id="dataHeading">Selected dataset</h2><p id="dataDescription" class="subtext"></p></div><div class="bar-actions"><button class="button outline" id="exportCurrentCsv" type="button">Download CSV ↓</button><button class="button primary" id="toPrepare" type="button">Prepare dataset →</button></div></div>
           <div class="stat-grid" id="stats"></div>
           <div class="data-split">
             <div><h3>Data preview</h3><div class="table-scroll" id="dataTable"></div></div>
@@ -134,6 +134,7 @@
             <div class="prompt-box"><textarea id="promptInput" rows="2" maxlength="800" placeholder="e.g. Trim all whitespace and remove duplicate order_id rows…" aria-label="Describe the data transformation"></textarea>
               <div class="prompt-actions"><button type="button" class="button light" id="guidedPlan">Guided commands</button><button type="button" class="button primary" id="ollamaPlan">Ask configured AI ✳</button></div>
             </div>
+            <div class="quick-actions"><strong>Quick actions</strong><button type="button" data-quick-op="Trim">Trim spaces</button><button type="button" data-quick-op="DropDuplicates">Remove duplicates</button><button type="button" data-quick-op="DropMissing">Drop blank rows</button><button type="button" data-quick-op="FilterEquals">Filter rows</button><button type="button" data-quick-op="KeepColumns">Keep columns</button></div>
             <div class="prompt-tips">Try: <button type="button" data-prompt="trim extra spaces">Trim whitespace</button><button type="button" data-prompt="remove duplicate order_id">Remove duplicate IDs</button><button type="button" data-prompt="sort by amount">Sort values</button></div>
             <p class="fineprint">Suggestions only update the editable plan. You must preview and explicitly approve every saved transformation.</p>
           </section>

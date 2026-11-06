@@ -162,6 +162,7 @@
     }
     renderQuality();
     $('exportCsv').disabled=state.large;
+    $('exportCurrentCsv').disabled=state.large;
     renderCanvas();renderEditor();
     if(!state.large)populateChartControls();
     // Other Studio modules receive the current, server-loaded dataset metadata.
@@ -651,7 +652,18 @@
       if(state.mode==='advanced')insertDrop(e,state.steps.length);
     });
     $('clearSteps').addEventListener('click',()=>{state.steps=[];state.selected=-1;invalidate();renderCanvas();renderEditor();notice('Unsaved pipeline steps cleared. Stored data was not affected.');});
-    $('exportCsv').addEventListener('click',()=>{if(state.dataset&&!state.large)window.location.assign('/api/datasets/'+encodeURIComponent(state.dataset.id)+'/export.csv');});
+    const downloadCurrent=()=>{
+      if(state.dataset&&!state.large)
+        window.location.assign('/api/datasets/'+encodeURIComponent(state.dataset.id)+'/export.csv');
+    };
+    $('exportCsv').addEventListener('click',downloadCurrent);
+    $('exportCurrentCsv').addEventListener('click',downloadCurrent);
+    document.querySelectorAll('[data-quick-op]').forEach(button=>button.addEventListener('click',()=>{
+      if(!state.dataset||state.large){notice('Upload an editable dataset first.',true);return;}
+      addOperation(button.dataset.quickOp);
+      go('prepare');
+      notice('Added '+labelFor(button.dataset.quickOp)+'. Review the settings, then preview before saving.');
+    }));
     $('stepOperation').addEventListener('change',e=>{
       const replacement=makeStep(e.target.value);state.steps[state.selected]=replacement;
       invalidate();renderCanvas();renderEditor();

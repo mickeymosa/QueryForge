@@ -269,3 +269,9 @@ table.pivot-matrix{border-collapse:separate;border-spacing:0;min-width:550px;max
 .graph-board .flow-node.is-selected{border:2px solid #10a08d}
 body.easy-mode .graph-board .node-move{opacity:.4;cursor:default}
 @media(max-width:800px){.graph-viewport.flow-canvas{max-height:580px}.graph-instructions{font-size:.76rem}}
+
+/* v0.9 quick recipes for users who do not know ETL terminology. */
+.quick-actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:15px 0;padding:13px;background:#f3f9f8;border-radius:11px;border:1px solid #dcefe9}
+.quick-actions strong{font-size:.78rem;color:#47645e;margin-right:6px}
+.quick-actions button{border:1px solid #abd8cf;border-radius:20px;background:white;color:#1c786d;padding:8px 12px;font-size:.78rem;font-weight:650}
+.quick-actions button:hover,.quick-actions button:focus-visible{background:#def4ef}
