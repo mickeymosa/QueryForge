@@ -9,7 +9,7 @@ public sealed record StudioPrompt(Guid DatasetId, string Prompt);
 public sealed record StudioProposedSteps(IReadOnlyList<TransformStep>? Steps);
 
 /// <summary>
-/// Optional local Ollama planner. No data rows or API secrets are sent to a cloud provider.
+/// Optional local Ollama or hosted OpenAI planner. Only prompts and column names are transmitted.
 /// This method only proposes allowlisted ETL steps, then validates the entire plan using the
 /// actual C# engine. Never saves/executes mutations without an independent preview + approval.
 /// </summary>
@@ -133,7 +133,7 @@ public sealed class StudioAiPlanner(HttpClient client, IConfiguration configurat
         }
         catch (JsonException)
         {
-            throw new AiPlanValidationException("Local AI returned invalid JSON; nothing was changed.");
+            throw new AiPlanValidationException("AI returned invalid JSON; nothing was changed.");
         }
 
         var steps = proposal?.Steps;
