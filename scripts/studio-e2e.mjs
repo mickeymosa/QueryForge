@@ -180,6 +180,7 @@ try{
 
 
   // A purpose-made sales fixture proves 2D monetary pivot accuracy and linked charts.
+  await page.locator('[data-view="data"]').click();
   await page.locator('#pivotSampleBtn').click();
   await page.waitForFunction(()=>
     document.getElementById('dataHeading')?.textContent==='pivot-sales.csv');
