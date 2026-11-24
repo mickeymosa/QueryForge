@@ -637,6 +637,14 @@
         const blob=await response.blob();await importFile(new File([blob],'orders.csv',{type:'text/csv'}));
       }catch(e){notice(e.message,true);}
     });
+    $('messySampleBtn').addEventListener('click',async()=>{
+      try{
+        const response=await fetch('/samples/messy-sales.csv');
+        if(!response.ok)throw new Error('Messy sample file unavailable.');
+        const blob=await response.blob();
+        await importFile(new File([blob],'messy-sales.csv',{type:'text/csv'}));
+      }catch(e){notice(e.message,true);}
+    });
     $('pivotSampleBtn').addEventListener('click',async()=>{
       try{
         const response=await fetch('/samples/pivot-sales.csv');
