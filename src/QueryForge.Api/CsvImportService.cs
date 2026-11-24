@@ -57,6 +57,8 @@ public sealed class CsvImportService(IQualityProfiler profiler, IDatasetReposito
             if (rows.Count >= MaxRows)
                 throw new InvalidDataException("Legacy processing accepts at most 3,000 rows. Use the new large-file import.");
 
+            if (csv.Parser.Count != headers.Length)
+                throw new InvalidDataException($"Record {rows.Count + 2} has {csv.Parser.Count} fields; expected {headers.Length}. Correct the CSV structure before importing.");
             var row = new Dictionary<string, string>(StringComparer.Ordinal);
             for (int c = 0; c < headers.Length; c++)
                 row.Add(headers[c], csv.GetField(c) ?? "");
