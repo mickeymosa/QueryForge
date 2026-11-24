@@ -26,7 +26,10 @@ public enum TransformOperation
     SortAscending,
     ReplaceText,
     KeepColumns,
-    DropExactDuplicates
+    DropExactDuplicates,
+    NormalizeMissing,
+    NormalizeNumber,
+    NormalizeDate
 }
 
 public sealed record TransformStep(
@@ -128,6 +131,20 @@ public sealed class EtlPipeline
             int affected = 0;
             switch (step.Operation)
             {
+                case TransformOperation.NormalizeMissing:
+                case TransformOperation.NormalizeNumber:
+                case TransformOperation.NormalizeDate:
+                    if (step.Operation == TransformOperation.NormalizeNumber && step.To is not ("invariant" or "us" or "eu"))
+                        throw new EtlValidationException("Choose an explicit numeric format: invariant, us or eu.");
+                    if (step.Operation == TransformOperation.NormalizeDate && step.To is not ("unambiguous" or "dmy" or "mdy"))
+                        throw new EtlValidationException("Choose an explicit date format: unambiguous, dmy or mdy.");
+                    foreach (var row in rows)
+                    {
+                        var original = row.Values[col!];
+                        var normalized = DataPreparation.Normalize(original, step.Operation, step.To);
+                        if (original != normalized) { row.Values[col!] = normalized; affected++; }
+                    }
+                    break;
                 case TransformOperation.Trim:
                     foreach (var row in rows)
                     {
