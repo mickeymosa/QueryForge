@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="/assets/qf-studio.css">
   <script src="/assets/qf-studio.js" defer></script>
   <script src="/assets/qf-pivot.js" defer></script>
+  <script src="/assets/qf-workspace.js" defer></script>
 </head>
 <body>
 <div class="app">
@@ -17,8 +18,8 @@
     <div class="sidebar-caption">WORKSPACE</div>
     <nav class="nav">
       <button type="button" class="nav-item is-active" data-view="data"><span class="nav-icon">▦</span>Data sources</button>
-      <button type="button" class="nav-item" data-view="prepare"><span class="nav-icon">◇</span>Prepare &amp; ETL</button>
-      <button type="button" class="nav-item" data-view="visualize"><span class="nav-icon">▥</span>Visualize &amp; report</button>
+      <button type="button" class="nav-item" data-view="prepare"><span class="nav-icon">◇</span>Advanced cleaning</button>
+      <button type="button" class="nav-item" data-view="visualize"><span class="nav-icon">▥</span>Advanced analytics</button>
     </nav>
     <div class="sidebar-caption">YOUR DATASETS</div>
     <div class="saved-list" id="savedDatasets"><p class="side-muted">Loading local datasets…</p></div>
@@ -49,7 +50,7 @@
           <h1 id="pageTitle">Start with your data<span class="accent">.</span></h1>
           <p id="pageSubtitle">Import a file, inspect data quality, and prepare it for analysis—without leaving this workspace.</p>
         </div>
-        <div class="heading-actions"><span class="small-tag">v0.9 · Local prototype</span></div>
+        <div class="heading-actions"><span class="small-tag">v1.0 · Development preview</span></div>
       </section>
 
       <section id="dataView" class="view">
@@ -76,14 +77,40 @@
             <div class="panel-top"><span class="tiny-badge">HOW IT WORKS</span><span class="small-help">One connected experience</span></div>
             <h2>From raw data to answers.</h2>
             <div class="journey-step"><span class="journey-number">01</span><div><strong>Import &amp; inspect</strong><p>Understand your source, missing values and duplicates.</p></div></div>
-            <div class="journey-step"><span class="journey-number">02</span><div><strong>Clean it visually</strong><p>Drag transformations or describe them in plain language.</p></div></div>
+            <div class="journey-step"><span class="journey-number">02</span><div><strong>Review cleaning recommendations</strong><p>Preview suggested changes without building a pipeline.</p></div></div>
             <div class="journey-step"><span class="journey-number">03</span><div><strong>Preview &amp; approve</strong><p>See exactly what will change before saving.</p></div></div>
-            <div class="journey-step"><span class="journey-number">04</span><div><strong>Explore the results</strong><p>Generate charts and source-backed summaries.</p></div></div>
+            <div class="journey-step"><span class="journey-number">04</span><div><strong>Ask your data</strong><p>Get calculated answers and relevant charts.</p></div></div>
           </section>
         </div>
         <section class="panel dataset-panel" id="dataDetails" hidden>
           <div class="section-header"><div><span class="tiny-badge">DATASET OVERVIEW</span><h2 id="dataHeading">Selected dataset</h2><p id="dataDescription" class="subtext"></p></div><div class="bar-actions"><button class="button outline" id="exportCurrentCsv" type="button">Download CSV ↓</button><button class="button primary" id="toPrepare" type="button">Prepare dataset →</button></div></div>
           <div class="stat-grid" id="stats"></div>
+          <section class="panel" id="guidedWorkspace" hidden>
+            <h2>Clean &amp; ask your data</h2>
+            <p class="subtext">Review suggested fixes, then ask a question. Original data remains unchanged.</p>
+            <h3>Recommended cleaning</h3>
+            <div id="guidedSuggestions"></div>
+            <div class="bar-actions"><button class="button light" id="guidedPreview" type="button" disabled>Preview selected fixes</button><button class="button primary" id="guidedApply" type="button" disabled>Save cleaned copy</button></div>
+            <div id="guidedChanges" aria-live="polite"></div>
+            <hr>
+            <h3>Ask your dataset</h3>
+            <p class="subtext">Supports counts, sums, averages and ranked categories. Complex filters and date comparisons are not supported yet.</p>
+            <label>Question <input id="guidedQuestion" type="text" maxlength="800" placeholder="Which products have the highest revenue?"></label>
+            <button class="button primary" id="guidedAsk" type="button">Interpret with AI</button>
+            <p id="guidedPlan" role="status">Review the calculation below before running it.</p>
+            <div class="chart-controls">
+              <label>Calculation<select id="guidedAggregate"><option value="count">Count records</option><option value="sum">Sum</option><option value="average">Average</option></select></label>
+              <label>Measure<select id="guidedMeasure"></select></label>
+              <label>Group by<select id="guidedGroup"></select></label>
+              <label>Maximum groups<select id="guidedTop"><option>5</option><option selected>10</option><option>20</option></select></label>
+            </div>
+            <label><input id="guidedExclude" type="checkbox"> Exclude all quality-flagged records</label>
+            <button class="button primary" id="guidedRun" type="button">Calculate answer</button>
+            <div id="guidedResult" aria-live="polite"></div>
+            <button id="guidedEvidence" class="button light" type="button" disabled>Download result evidence (.json)</button>
+            <p id="guidedStatus" role="status"></p>
+          </section>
+
           <div class="data-split">
             <div><h3>Data preview</h3><div class="table-scroll" id="dataTable"></div></div>
             <div><h3>Quality signals</h3><div id="qualitySummary" class="quality-list"></div></div>
