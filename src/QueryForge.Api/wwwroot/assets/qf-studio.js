@@ -3,7 +3,7 @@
   const $ = id => document.getElementById(id);
   const MAX_STEPS = 12;
   const OPS = [
-    ['Trim','Trim whitespace','↧'],['DropDuplicates','Remove duplicates','⊘'],
+    ['Trim','Trim whitespace','↧'],['DropDuplicates','Remove duplicates','⊘'],['DropExactDuplicates','Remove exact repeated rows','⊘'],
     ['DropMissing','Remove empty rows','−'],['FillMissing','Fill missing values','＋'],
     ['FilterEquals','Filter equals','＝'],['FilterContains','Filter contains','⌕'],
     ['FilterAmountAbove','Filter amount above','>'],['SortAscending','Sort ascending','↥'],
@@ -615,6 +615,7 @@
     link.href=url;link.download='queryforge-evidence-'+state.dataset.id+'.json';document.body.append(link);link.click();link.remove();URL.revokeObjectURL(url);
   }
   function bind(){
+    window.addEventListener('queryforge:open-dataset',e=>loadDataset(e.detail.id,false));
     document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>{
       const target=b.dataset.view;
       if(target==='visualize'&&state.dataset&&!state.large)getReport();
