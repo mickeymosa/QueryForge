@@ -25,7 +25,8 @@ public enum TransformOperation
     CopyColumn,
     SortAscending,
     ReplaceText,
-    KeepColumns
+    KeepColumns,
+    DropExactDuplicates
 }
 
 public sealed record TransformStep(
@@ -107,7 +108,7 @@ public sealed class EtlPipeline
                 throw new EtlValidationException($"Step {index + 1} has an invalid operation.");
 
             string? col = step.Column;
-            bool columnRequired = step.Operation is not (TransformOperation.Trim or TransformOperation.KeepColumns) || !string.IsNullOrWhiteSpace(col);
+            bool columnRequired = step.Operation is not (TransformOperation.Trim or TransformOperation.KeepColumns or TransformOperation.DropExactDuplicates) || !string.IsNullOrWhiteSpace(col);
             if (columnRequired && step.Operation != TransformOperation.AddColumn)
             {
                 if (string.IsNullOrWhiteSpace(col) || !headers.Contains(col, StringComparer.Ordinal))
@@ -173,6 +174,12 @@ public sealed class EtlPipeline
                     break;
                 case TransformOperation.DropMissing:
                     affected = rows.RemoveAll(r => string.IsNullOrWhiteSpace(r.Values[col!]));
+                    break;
+                case TransformOperation.DropExactDuplicates:
+                    // Full-row, ordinal equality; no assumptions about business keys.
+                    var exact = new HashSet<string>(StringComparer.Ordinal);
+                    affected = rows.RemoveAll(r => !exact.Add(JsonSerializer.Serialize(
+                        headers.Select(h => r.Values[h]).ToArray())));
                     break;
                 case TransformOperation.DropDuplicates:
                     var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
