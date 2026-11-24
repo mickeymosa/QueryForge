@@ -18,32 +18,60 @@
     headers.forEach(h=>{const o=el('option',h);o.value=h;select.append(o);});
   }
   function sync(){ $('guidedMeasure').disabled=$('guidedAggregate').value==='count'; }
-  const selected=()=>Array.from($('guidedSuggestions').querySelectorAll('input:checked')).map(e=>JSON.parse(e.value));
-  function controls(){ $('guidedPreview').disabled=busy||!selected().length; $('guidedApply').disabled=busy||!preview; $('guidedRun').disabled=busy; $('guidedAsk').disabled=busy; }
+  const selected=()=>Array.from($('guidedSuggestions').querySelectorAll('input:checked')).map(e=>JSON.parse(e.value)).sort((a,b)=>Number(a.operation==='DropExactDuplicates')-Number(b.operation==='DropExactDuplicates'));
+  function controls(){ $('guidedPreview').disabled=busy||!selected().length||selected().length>12; $('guidedApply').disabled=busy||!preview; $('guidedRun').disabled=busy; $('guidedAsk').disabled=busy; }
   async function run(fn){
     if(busy||!dataset)return;
     const current=generation;busy=true;controls();status('');
     try{await fn(current);}catch(e){if(current===generation)status(e.message);}
     finally{busy=false;controls();}
   }
+  function addSuggestion(step, description, checked=false){
+    const label=el('label');label.style.display='block';
+    const input=el('input');input.type='checkbox';input.value=JSON.stringify(step);input.checked=checked;
+    input.addEventListener('change',()=>{invalidate();controls();});
+    label.append(input,document.createTextNode(' '+description));
+    $('guidedSuggestions').append(label);
+  }
+  function renderProfile(profiles){
+    const table=el('table');const head=el('tr');
+    ['Column','Suggested type','Blank','Placeholder','Distinct','Numbers (plain / US / EU)','Dates (clear / ambiguous)','Case variants','Outliers'].forEach(v=>head.append(el('th',v)));table.append(head);
+    for(const p of profiles){const row=el('tr');
+      [p.name,p.suggestedType,p.blank,p.placeholder,p.distinct,[p.invariantNumbers,p.usNumbers,p.euNumbers].join(' / '),[p.unambiguousDates,p.ambiguousDates].join(' / '),p.caseVariants,p.outliers].forEach(v=>row.append(el('td',String(v))));table.append(row);
+    }
+    $('guidedProfile').replaceChildren(table);
+  }
+  $('guidedRule').onchange=()=>{
+    const mapping=$('guidedRule').value==='mapping';
+    $('guidedFrom').disabled=!mapping;$('guidedTo').disabled=!mapping;
+  };
+  $('guidedAddRule').onclick=()=>{
+    if(!dataset||dataset.large||busy)return;
+    const column=$('guidedCleanColumn').value,rule=$('guidedRule').value;
+    const operation=rule==='mapping'?'Replace':['us','eu','invariant'].includes(rule)?'NormalizeNumber':'NormalizeDate';
+    const step={operation,column,from:rule==='mapping'?$('guidedFrom').value:null,to:rule==='mapping'?$('guidedTo').value:rule};
+    if(rule==='mapping'&&(!step.from||!step.to)){status('Provide both exact original and canonical values.');return;}
+    const existing=Array.from($('guidedSuggestions').querySelectorAll('input')).map(e=>JSON.parse(e.value));
+    if(existing.some(s=>s.column===column&&s.operation===operation&&(operation!=='Replace'||s.from===step.from))){
+      status('A rule for this column and operation already exists. Reload the dataset to rebuild the plan.');return;
+    }
+    if(selected().length>=12){status('Maximum 12 steps per preview. Save a copy and continue in another pass.');return;}
+    addSuggestion(step,operation+' · '+column+' · '+(rule==='mapping'?step.from+' → '+step.to:rule),true);
+    invalidate();controls();status('Rule added. Preview the selected steps before saving.');
+  };
   window.addEventListener('queryforge:dataset-selected',async e=>{
     const current=++generation; dataset=e.detail; invalidate();clearAnswer();
     $('guidedWorkspace').hidden=dataset.large;
-    $('guidedSuggestions').replaceChildren();$('guidedQuestion').value='';$('guidedPlan').textContent='Review the calculation below before running it.';
+    $('guidedSuggestions').replaceChildren();$('guidedProfile').replaceChildren();$('guidedQuestion').value='';$('guidedPlan').textContent='Review the calculation below before running it.';
     if(dataset.large)return;
-    options('guidedMeasure',dataset.headers,false);options('guidedGroup',dataset.headers,true);
+    options('guidedCleanColumn',dataset.headers,false);options('guidedMeasure',dataset.headers,false);options('guidedGroup',dataset.headers,true);
     $('guidedAggregate').value='count';$('guidedExclude').checked=false;sync();controls();
     try{
-      const suggestions=await api(ws()+'/recommend');
+      const [suggestions,profiles]=await Promise.all([api(ws()+'/recommend'),api(ws()+'/profile')]);
       if(current!==generation)return;
-      if(!suggestions.length)$('guidedSuggestions').append(el('p','No whitespace or exact duplicate fixes detected. Other quality signals still need review.'));
-      for(const s of suggestions){
-        const label=el('label');label.style.display='block';
-        const input=el('input');input.type='checkbox';input.value=JSON.stringify(s.step);
-        input.addEventListener('change',()=>{invalidate();controls();});
-        label.append(input,document.createTextNode(' '+s.description+' · '+s.affectedRows+' affected source rows'));
-        $('guidedSuggestions').append(label);
-      }
+      renderProfile(profiles);
+      if(!suggestions.length)$('guidedSuggestions').append(el('p','No automatic fixes detected. Review column profiles and add explicit rules as needed.'));
+      for(const s of suggestions) addSuggestion(s.step,s.description+' · '+s.affectedRows+' affected source rows');
       controls();
     }catch(e){if(current===generation)status(e.message);}
   });
