@@ -248,7 +248,7 @@
     const id=cols.find(c=>['order_id','invoice_id','id'].includes(c.toLowerCase()));
     let column=op==='Trim'?null:(op==='DropDuplicates' && id?id:(cols[0]||null));
     if(op==='AddColumn')column='new_field';
-    if(op==='KeepColumns')column=null;
+    if(op==='KeepColumns'||op==='DropExactDuplicates')column=null;
     const to=['FillMissing','Replace','ReplaceText','AddColumn','RenameColumn','CopyColumn','KeepColumns'].includes(op)
       ? (op==='AddColumn'?'value':op==='RenameColumn'?'renamed_field':op==='CopyColumn'?'copied_field':op==='KeepColumns'?cols.join(','):'') : null;
     return {operation:op,column,from:null,to};
@@ -449,10 +449,10 @@
     const cols=inferHeaders(index);
     fillSelect($('stepColumn'),cols,step.column,step.operation==='Trim');
     const isAdd=step.operation==='AddColumn',needsCol=step.operation!=='Trim';
-    $('columnWrap').hidden=isAdd||step.operation==='KeepColumns';
+    $('columnWrap').hidden=isAdd||['KeepColumns','DropExactDuplicates'].includes(step.operation);
     $('newColumnWrap').hidden=!isAdd;
     $('stepColumnFree').value=isAdd?(step.column||''):'';
-    if(!isAdd && step.operation!=='Trim' && step.operation!=='KeepColumns' && cols.length>0 && !cols.includes(step.column)){
+    if(!isAdd && step.operation!=='Trim' && step.operation!=='KeepColumns' && step.operation!=='DropExactDuplicates' && cols.length>0 && !cols.includes(step.column)){
       // Display missing column error during preview rather than changing a user's plan silently.
       const option=ui('option',null,'Missing: '+step.column);option.value=step.column||'';
       $('stepColumn').append(option);$('stepColumn').value=step.column;
