@@ -54,7 +54,7 @@ public static class DataPreparation
         if (operation == TransformOperation.NormalizeMissing)
             return IsPlaceholder(original) ? "" : original;
         if (operation == TransformOperation.NormalizeNumber && TryNumber(original, policy!, out var number))
-            return number.ToString("G29", Invariant);
+            return number.ToString("0.############################", Invariant);
         if (operation == TransformOperation.NormalizeDate && TryDate(original, policy!, out var date))
             return date.ToString("yyyy-MM-dd", Invariant);
         return original; // Invalid or unresolved input is never overwritten.
