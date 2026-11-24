@@ -58,7 +58,9 @@ public sealed class StudioImportService(CsvImportService csvImport)
                 for (int i = 0; i < headers.Length; i++)
                 {
                     object? value = sheet.GetValue(i);
-                    string cell = value is IFormattable formatted
+                    string cell = value is DateTime date
+                        ? date.ToString(date.TimeOfDay == TimeSpan.Zero ? "yyyy-MM-dd" : "yyyy-MM-dd'T'HH:mm:ss.fffffff", CultureInfo.InvariantCulture)
+                        : value is IFormattable formatted
                         ? formatted.ToString(null, CultureInfo.InvariantCulture)
                         : Convert.ToString(value, CultureInfo.InvariantCulture) ?? "";
                     if (cell.Length > 16_384)
