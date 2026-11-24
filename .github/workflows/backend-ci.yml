@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - 'feat/backend-mvp-v0.1'
+      - 'feat/intelligent-data-workspace-v1.0'
     paths:
       - 'src/QueryForge.Api/**'
       - 'src/QueryForge.PipelineCore/**'
@@ -141,6 +142,25 @@ jobs:
           curl -fsS http://127.0.0.1:5080/assets/qf-enhance.js > /tmp/qf-enhance.js
           grep -q 'dragover' /tmp/qf-enhance.js
           node --check /tmp/qf-enhance.js
+          echo "Reconcile messy sales through the real guided API"
+          curl -fsS -F "file=@src/QueryForge.Api/wwwroot/samples/messy-sales.csv" http://127.0.0.1:5080/api/studio/import > /tmp/messy-source.json
+          MESSY_ID=$(jq -r '.id' /tmp/messy-source.json)
+          curl -fsS "http://127.0.0.1:5080/api/workspace/$MESSY_ID/profile" > /tmp/messy-profile.json
+          jq -e 'any(.[]; .name == "order_date" and .ambiguousDates == 1)' /tmp/messy-profile.json
+          curl -fsS "http://127.0.0.1:5080/api/workspace/$MESSY_ID/recommend" > /tmp/messy-recommend.json
+          jq -e 'any(.[]; .step.operation == "DropExactDuplicates")' /tmp/messy-recommend.json
+          cat > /tmp/messy-plan.json <<'JSON'
+          {"pipelineName":"Sales cleanup","steps":[{"operation":"NormalizeMissing","column":"order_date"},{"operation":"NormalizeMissing","column":"revenue"},{"operation":"NormalizeNumber","column":"revenue","to":"us"},{"operation":"NormalizeDate","column":"order_date","to":"dmy"},{"operation":"Replace","column":"country","from":"PL","to":"Poland"},{"operation":"Replace","column":"country","from":"poland","to":"Poland"},{"operation":"DropExactDuplicates"}]}
+          JSON
+          curl -fsS -H 'Content-Type: application/json' --data-binary @/tmp/messy-plan.json "http://127.0.0.1:5080/api/datasets/$MESSY_ID/etl/preview" > /tmp/messy-preview.json
+          jq -e '.rowCountBefore == 8 and .rowCountAfter == 7' /tmp/messy-preview.json
+          jq --arg hash "$(jq -r '.previewFingerprint' /tmp/messy-preview.json)" '. + {previewFingerprint: $hash}' /tmp/messy-plan.json > /tmp/messy-apply.json
+          curl -fsS -H 'Content-Type: application/json' --data-binary @/tmp/messy-apply.json "http://127.0.0.1:5080/api/datasets/$MESSY_ID/etl/apply" > /tmp/messy-clean.json
+          CLEAN_ID=$(jq -r '.id' /tmp/messy-clean.json)
+          curl -fsS -H 'Content-Type: application/json' --data '{"aggregate":"sum","measure":"revenue","groupBy":"product"}' "http://127.0.0.1:5080/api/workspace/$CLEAN_ID/analyze" > /tmp/messy-answer.json
+          jq -e '(.total|tonumber) == 2441 and .usedRows == 6 and .invalidMeasureRows == 1 and .chart == "bar" and .groups[0].label == "Laptop"' /tmp/messy-answer.json
+          curl -fsS http://127.0.0.1:5080/assets/qf-workspace.js > /tmp/qf-workspace.js
+          node --check /tmp/qf-workspace.js
           echo "Checking Analytics Studio and evidence-based report endpoints"
           curl -fsS "http://127.0.0.1:5080/api/datasets/$ID/insights" > /tmp/qf-insights.json
           jq -e '.rowCount == 7 and (.suggestedCharts | length > 0)' /tmp/qf-insights.json
