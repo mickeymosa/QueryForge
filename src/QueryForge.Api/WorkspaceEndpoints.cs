@@ -26,6 +26,12 @@ public static class WorkspaceService
         var suggestions = new List<CleaningSuggestion>();
         int trim = rows.Count(r => headers.Any(h => r.GetValueOrDefault(h, "") != r.GetValueOrDefault(h, "").Trim()));
         if (trim > 0) suggestions.Add(new("Trim surrounding whitespace in all fields", trim, new(TransformOperation.Trim)));
+        foreach (var h in headers)
+        {
+            int placeholders = rows.Count(r => DataPreparation.IsPlaceholder(r.GetValueOrDefault(h, "")));
+            if (placeholders > 0) suggestions.Add(new("Treat N/A, NULL, NaN or em dash as missing in " + h + " (confirm meaning)", placeholders,
+                new(TransformOperation.NormalizeMissing, h)));
+        }
         var seen = new HashSet<string>(StringComparer.Ordinal);
         int duplicates = rows.Count(r => !seen.Add(JsonSerializer.Serialize(headers.Select(h => r.GetValueOrDefault(h, "")).ToArray())));
         if (duplicates > 0) suggestions.Add(new("Remove exact repeated rows (confirm they are accidental)", duplicates, new(TransformOperation.DropExactDuplicates)));
@@ -102,6 +108,11 @@ public static class WorkspaceEndpoints
         {
             var source = await repo.GetAsync(id, ct);
             return source is null ? Results.NotFound() : Results.Ok(WorkspaceService.Recommend(source));
+        });
+        app.MapGet("/api/workspace/{id:guid}/profile", async (Guid id, IDatasetRepository repo, CancellationToken ct) =>
+        {
+            var source = await repo.GetAsync(id, ct);
+            return source is null ? Results.NotFound() : Results.Ok(DataPreparation.Profile(source));
         });
         app.MapPost("/api/workspace/{id:guid}/analyze", async (Guid id, WorkspaceAnalysis plan, IDatasetRepository repo, CancellationToken ct) =>
         {
