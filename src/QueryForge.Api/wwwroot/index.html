@@ -69,6 +69,7 @@
             <div class="import-actions">
               <button type="button" class="button primary" id="chooseBtn">Choose a file <span>↗</span></button>
               <button type="button" class="button light" id="sampleBtn">Try sample data</button>
+              <button type="button" class="button outline" id="messySampleBtn">Try messy sales data</button>
               <button type="button" class="button outline" id="pivotSampleBtn">Try pivot sales data</button>
             </div>
             <p class="fineprint">Excel uses the first worksheet and its first row as column headers. Uploads are limited to 3,000 rows / 40 columns for editable ETL.</p>
@@ -88,8 +89,30 @@
           <section class="panel" id="guidedWorkspace" hidden>
             <h2>Clean &amp; ask your data</h2>
             <p class="subtext">Review suggested fixes, then ask a question. Original data remains unchanged.</p>
+            <h3>Understand your data</h3>
+            <p class="subtext">Inferred types are suggestions, not schema changes. Counts include ambiguous dates and numeric format candidates. Outliers are flagged for investigation only.</p>
+            <div class="table-scroll" id="guidedProfile"></div>
             <h3>Recommended cleaning</h3>
             <div id="guidedSuggestions"></div>
+            <details>
+              <summary>Set column-specific cleaning rules</summary>
+              <p class="subtext">Choose a format only if you know the source convention. Invalid values stay unchanged. Do not reapply a locale conversion to already normalized data.</p>
+              <div class="chart-controls">
+                <label>Column<select id="guidedCleanColumn"></select></label>
+                <label>Rule<select id="guidedRule">
+                  <option value="us">Number · 1,234.56</option>
+                  <option value="eu">Number · 1.234,56</option>
+                  <option value="invariant">Number · 1234.56</option>
+                  <option value="unambiguous">Date · unambiguous only</option>
+                  <option value="dmy">Date · day/month/year</option>
+                  <option value="mdy">Date · month/day/year</option>
+                  <option value="mapping">Replace exact value</option>
+                </select></label>
+                <label>Original value<input id="guidedFrom" maxlength="200" disabled></label>
+                <label>Canonical value<input id="guidedTo" maxlength="200" disabled></label>
+              </div>
+              <button id="guidedAddRule" class="button light" type="button">Add rule to cleaning plan</button>
+            </details>
             <div class="bar-actions"><button class="button light" id="guidedPreview" type="button" disabled>Preview selected fixes</button><button class="button primary" id="guidedApply" type="button" disabled>Save cleaned copy</button></div>
             <div id="guidedChanges" aria-live="polite"></div>
             <hr>
