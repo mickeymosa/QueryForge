@@ -164,6 +164,7 @@ app.MapStreamDatasetEndpoints();
 app.MapPipelineDemoEndpoints();
 app.MapStudioImportEndpoints();
 app.MapStudioAiEndpoints();
+app.MapWorkspaceEndpoints();
 
 app.Run();
 
